@@ -2,21 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type {
-  AttemptLog,
-  ConceptRef,
-  CornellCard,
-  QuickCheckQuestion,
-  StudySession
-} from "@/types/learning";
-import {
-  appendAttempt,
-  cacheCard,
-  loadAttempts,
-  loadSession
-} from "@/lib/learning/storage";
+import LearnCard from "../../components/learn/LearnCard";
+import TypeIn from "../../components/ui/TypeIn";
+import Skeleton from "../../components/ui/Skeleton";
+import Shell from "../../components/Shell";
+import { copy } from "@/lib/copy/en";
+import type { ConceptRef, CornellCard, StudySession } from "@/types/learning";
+import { cacheCard, loadAttempts, loadSession } from "@/lib/learning/storage";
+import { computeDueStatus, dueLabel } from "@/lib/learning/review";
 
 type Props = { params: { conceptId: string } };
+
+type CardMeta = { source?: "llm" | "fallback"; generationId?: string };
 
 export default function ConceptPage({ params }: Props) {
   const searchParams = useSearchParams();
@@ -27,10 +24,9 @@ export default function ConceptPage({ params }: Props) {
   const [session, setSession] = useState<StudySession | null>(null);
   const [concept, setConcept] = useState<ConceptRef | null>(null);
   const [card, setCard] = useState<CornellCard | null>(null);
+  const [cardMeta, setCardMeta] = useState<CardMeta | null>(null);
   const [loadingCard, setLoadingCard] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [results, setResults] = useState<Record<string, string>>({});
   const [attemptCount, setAttemptCount] = useState(0);
   const [checked, setChecked] = useState(false);
 
@@ -50,39 +46,45 @@ export default function ConceptPage({ params }: Props) {
     setChecked(true);
   }, [sessionId, conceptId]);
 
-  const fetchCard = async () => {
+  const fetchCard = async (opts?: { force?: boolean }) => {
     if (!session || !concept) return;
+    const isForce = opts?.force ?? false;
     setLoadingCard(true);
     setError(null);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeoutMs = isForce ? 30000 : 15000;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch("/api/cornell", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         signal: controller.signal,
         body: JSON.stringify({
           conceptId: concept.id,
           conceptTitle: concept.title,
-          context: session.context
+          context: session.context,
+          force: isForce,
+          regenerateNonce: Date.now()
         })
       });
       clearTimeout(timeout);
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "Failed to generate card.");
+        throw new Error(text || copy.concept.generateError);
       }
       const json = await res.json();
       if (!json.ok) {
-        throw new Error(json.error?.message || "Failed to generate card.");
+        throw new Error(json.error?.message || copy.concept.generateError);
       }
       const nextCard: CornellCard = json.data.card;
       setCard(nextCard);
+      setCardMeta(json.data.meta ?? null);
       cacheCard(session.sessionId, conceptId, nextCard);
     } catch (err) {
       const e = err as Error;
       if (e.name === "AbortError") {
-        setError("Request timed out (15s). Please retry; fallback will still work if the API is slow.");
+        setError(copy.practice.timeout);
       } else {
         setError(e.message);
       }
@@ -99,178 +101,141 @@ export default function ConceptPage({ params }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, concept]);
 
-  const handleAnswerChange = (questionId: string, value: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
-  };
-
-  const gradeAnswer = (question: QuickCheckQuestion, value: string) => {
-    if (question.type === "mcq") {
-      return value.trim() === question.answer.trim();
-    }
-    const normalizedUser = value.toLowerCase();
-    const normalizedAnswer = question.answer.toLowerCase();
-    return normalizedUser.includes(normalizedAnswer) || normalizedAnswer.includes(normalizedUser);
-  };
-
-  const handleSubmit = (question: QuickCheckQuestion) => {
-    if (!session || !concept || !card) return;
-    const value = answers[question.id] ?? "";
-    const correct = gradeAnswer(question, value);
-    const attempt: AttemptLog = {
-      sessionId: session.sessionId,
-      conceptId: concept.id,
-      conceptTitle: concept.title,
-      questionId: question.id,
-      type: question.type,
-      correct,
-      userAnswer: value,
-      expectedAnswer: question.answer,
-      createdAt: Date.now()
-    };
-    appendAttempt(attempt);
-    setAttemptCount((prev) => prev + 1);
-    setResults((prev) => ({
-      ...prev,
-      [question.id]: correct ? "Correct" : "Try again"
-    }));
-  };
-
-  const quickChecks = useMemo(() => card?.quickCheck ?? [], [card]);
+  const headerSummary = useMemo(
+    () => (card ? [card.summary] : []),
+    [card]
+  );
 
   if (!sessionId || !conceptId) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 px-4 py-10">
-        <p className="text-slate-300">Missing session or concept. Go back to start.</p>
-      </main>
+      <Shell>
+        <div className="flex min-h-screen flex-col gap-4">
+          <p className="text-[color:var(--muted)]">{copy.concept.missingParams}</p>
+          <button className="btn-secondary w-fit" onClick={() => router.push("/")}>
+            {copy.common.backToHome}
+          </button>
+        </div>
+      </Shell>
     );
   }
 
   if (!concept || !session) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 px-4 py-10">
-        <p className="text-slate-300">
-          {checked ? "Concept or session not found in this browser." : "Loading concept..."}
-        </p>
-      </main>
+      <Shell>
+        <div className="flex min-h-screen flex-col gap-4">
+          <p className="text-[color:var(--muted)]">
+            {checked ? copy.concept.notFound : copy.common.loading}
+          </p>
+          <button className="btn-secondary w-fit" onClick={() => router.push(`/learn?session=${sessionId}`)}>
+            {copy.common.backToConcepts}
+          </button>
+        </div>
+      </Shell>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-10">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm text-slate-400">Session {session.sessionId}</p>
-          <h1 className="text-2xl font-semibold text-white">{concept.title}</h1>
-          <p className="text-sm text-slate-300">{concept.description}</p>
+    <Shell>
+      <div className="flex min-h-screen flex-col gap-7 pb-8">
+        <div className="glass-card flex flex-col gap-4 border border-[color:var(--border)]/70">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--muted)]">
+              <button
+                className="btn-glass px-3 py-1 text-xs"
+                onClick={() => router.push(`/learn?session=${sessionId}`)}
+              >
+                {copy.common.backToConcepts}
+              </button>
+              <span className="text-[color:var(--muted)]">/</span>
+              <span className="text-[color:var(--text)]">{concept.title}</span>
+            </div>
+            <span className="badge">
+              {copy.concept.sourceLabel}{" "}
+              {cardMeta?.source ? (cardMeta.source === "llm" ? copy.concept.sourceLLM : copy.concept.sourceFallback) : "..."}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm text-[color:var(--muted)]">
+                {copy.common.session} {session.sessionId}
+              </p>
+              <h1 className="text-3xl font-semibold tracking-tight text-[color:var(--text)]">{concept.title}</h1>
+              <p className="text-sm text-[color:var(--muted)]">{concept.description}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="btn-glass"
+                onClick={() => fetchCard({ force: true })}
+                disabled={loadingCard}
+              >
+                {loadingCard ? copy.concept.regenerating : copy.concept.regenerate}
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => router.push(`/practice?session=${sessionId}&conceptId=${conceptId}`)}
+              >
+                {copy.common.startPractice}
+              </button>
+            </div>
+          </div>
+          {loadingCard && !card ? <div className="skeleton h-4 w-64" /> : null}
+          {headerSummary.length ? <TypeIn lines={headerSummary} className="text-[color:var(--muted)]" /> : null}
+          {error ? <p className="text-sm text-rose-400">{error}</p> : null}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button className="btn-secondary" onClick={fetchCard} disabled={loadingCard}>
-            {loadingCard ? "Generating..." : "Regenerate card"}
-          </button>
-          <button
-            className="btn-primary"
-            onClick={() => router.push(`/feedback?session=${sessionId}&conceptId=${conceptId}`)}
-          >
-            Feedback
-          </button>
-        </div>
-      </header>
 
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+        <div className="grid gap-6 lg:grid-cols-[1.75fr_1fr]">
+          <div className="space-y-4">
+            <section className="glass-card text-sm text-[color:var(--muted)]">
+              <h2 className="text-base font-semibold text-[color:var(--text)]">{copy.concept.cardBasicsTitle}</h2>
+              <p className="mt-1 text-[color:var(--muted)]">{copy.concept.cardBasicsIntro}</p>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-[color:var(--muted)]">
+                {copy.concept.cardBasicsSteps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </section>
 
-      {card ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="card space-y-3">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Cues</h2>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-300">
-                {card.cues.map((cue, idx) => (
-                  <li key={idx}>{cue}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Notes</h2>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-300">
-                {card.notes.map((note, idx) => (
-                  <li key={idx}>{note}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Summary</h2>
-              <p className="mt-2 text-slate-300">{card.summary}</p>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Misconceptions</h2>
-              <ul className="mt-2 space-y-2 text-slate-300">
-                {card.misconceptions.map((item, idx) => (
-                  <li key={idx} className="rounded-lg bg-slate-800 px-3 py-2">
-                    <p className="text-sm font-semibold text-rose-300">Misconception: {item.misconception}</p>
-                    <p className="text-sm text-emerald-200">Correction: {item.correction}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-
-          <section className="card space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Quick Check</h2>
-              <p className="text-xs text-slate-400">{attemptCount} attempts saved</p>
-            </div>
-            {quickChecks.map((question) => (
-              <div key={question.id} className="rounded-lg bg-slate-800/60 p-3">
-                <p className="font-medium text-white">{question.prompt}</p>
-                {question.type === "mcq" ? (
-                  <div className="mt-2 space-y-2">
-                    {question.choices.map((choice, idx) => (
-                      <label key={idx} className="flex cursor-pointer items-start gap-2 text-sm text-slate-200">
-                        <input
-                          type="radio"
-                          className="mt-1 accent-emerald-500"
-                          name={question.id}
-                          value={choice}
-                          checked={answers[question.id] === choice}
-                          onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                        />
-                        <span>{choice}</span>
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <textarea
-                    className="input mt-2 min-h-[90px]"
-                    placeholder="Type your answer..."
-                    value={answers[question.id] || ""}
-                    onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                  />
-                )}
-                <div className="mt-3 flex items-center gap-2">
-                  <button className="btn-primary" onClick={() => handleSubmit(question)}>
-                    Save attempt
-                  </button>
-                  {results[question.id] && (
-                    <span
-                      className={`text-sm ${
-                        results[question.id] === "Correct" ? "text-emerald-300" : "text-amber-300"
-                      }`}
-                    >
-                      {results[question.id]}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2 text-xs text-slate-400">
-                  <p>Expected: {question.answer}</p>
-                  {question.hints?.length ? <p>Hint: {question.hints[0]}</p> : null}
-                </div>
+            {card ? (
+              <LearnCard card={card} />
+            ) : (
+              <div className="space-y-3">
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-40 w-full" />
               </div>
-            ))}
-          </section>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="glass-card sticky top-28 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[color:var(--muted)]">{copy.common.attempts}</span>
+                <span className="chip text-sm">{attemptCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[color:var(--muted)]">{copy.practice.dueLabel}</span>
+                <span className="chip text-sm">
+                  {dueLabel(computeDueStatus(session.review?.[conceptId] ?? null))}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 pt-2">
+                <button
+                  className="btn-primary"
+                  onClick={() => router.push(`/practice?session=${sessionId}&conceptId=${conceptId}`)}
+                >
+                  {copy.common.startPractice}
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => router.push(`/feedback?session=${sessionId}&conceptId=${conceptId}`)}
+                >
+                  {copy.common.viewFeedback}
+                </button>
+              </div>
+            </div>
+            {loadingCard ? <Skeleton className="h-24 w-full" /> : null}
+          </div>
         </div>
-      ) : (
-        <p className="text-slate-300">{loadingCard ? "Generating card..." : "No card yet."}</p>
-      )}
-    </main>
+      </div>
+    </Shell>
   );
 }

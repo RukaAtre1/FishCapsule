@@ -8,7 +8,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui"]
+        sans: ["Plus Jakarta Sans", "ui-sans-serif", "system-ui"]
+      },
+      container: {
+        center: true
       }
     }
   },

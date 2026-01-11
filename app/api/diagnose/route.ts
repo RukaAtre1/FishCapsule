@@ -72,7 +72,9 @@ function analyzeBarriers(attempts: AttemptLog[]): {
     });
   }
 
-  const lowConfidence = attempts.filter((a) => a.confidence === "low");
+  const lowConfidence = attempts.filter((a) =>
+    typeof a.confidence === "number" ? a.confidence <= 2 : a.confidence === "low"
+  );
   if ((lowConfidence.length > 0 && total < 4) || total <= 2) {
     barriers.push({
       id: "confidence_block",

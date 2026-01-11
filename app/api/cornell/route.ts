@@ -121,6 +121,7 @@ export async function POST(req: Request) {
     const conceptId: string = body.conceptId;
     const conceptTitle: string = body.conceptTitle;
     const context: string = body.context ?? "";
+    const force: boolean = !!body.force;
 
     if (!conceptId || !conceptTitle || !context) {
       return NextResponse.json(
@@ -134,7 +135,7 @@ export async function POST(req: Request) {
     if (process.env.ZAI_API_KEY) {
       try {
         const messages = cornellMessages(conceptId, conceptTitle, context);
-        const llm = await callGLM(messages, undefined, { timeoutMs: 12000 });
+        const llm = await callGLM(messages, undefined, { timeoutMs: force ? 30000 : 15000 });
         if (llm.ok && llm.value?.card) {
           const raw = llm.value.card;
           const card: CornellCard = {
@@ -162,7 +163,16 @@ export async function POST(req: Request) {
 
           return NextResponse.json({
             ok: true,
-            data: { card: completedCard, meta: { source: "llm" as const } }
+            data: {
+              card: completedCard,
+              meta: {
+                source: "llm" as const,
+                generationId:
+                  typeof crypto !== "undefined" && "randomUUID" in crypto
+                    ? crypto.randomUUID()
+                    : `gen-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
+              }
+            }
           });
         }
       } catch (err) {
@@ -172,7 +182,17 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      data: { card: fallbackCard, meta: { source: "fallback" as const, reason: "LLM unavailable or failed" } }
+      data: {
+        card: fallbackCard,
+        meta: {
+          source: "fallback" as const,
+          reason: "LLM unavailable or failed",
+          generationId:
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `gen-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
+        }
+      }
     });
   } catch (err) {
     return NextResponse.json(

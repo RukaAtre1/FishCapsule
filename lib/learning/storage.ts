@@ -1,9 +1,13 @@
-import type { AttemptLog, CornellCard, StudySession } from "@/types/learning";
+import type { AttemptLog, CornellCard, FeedbackResponse, StudySession } from "@/types/learning";
 
 const SESSION_PREFIX = "study-session:";
 const ATTEMPT_PREFIX = "study-attempts:";
 
 const hasWindow = () => typeof window !== "undefined" && !!window.localStorage;
+
+function attemptsKey(sessionId: string, conceptId: string) {
+  return `${ATTEMPT_PREFIX}${sessionId}:${conceptId}`;
+}
 
 export function createSessionId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -57,7 +61,7 @@ export function cacheCard(sessionId: string, conceptId: string, card: CornellCar
 
 export function appendAttempt(attempt: AttemptLog) {
   if (!hasWindow()) return;
-  const key = `${ATTEMPT_PREFIX}${attempt.sessionId}:${attempt.conceptId}`;
+  const key = attemptsKey(attempt.sessionId, attempt.conceptId);
   const existing = localStorage.getItem(key);
   let attempts: AttemptLog[] = [];
   if (existing) {
@@ -69,11 +73,17 @@ export function appendAttempt(attempt: AttemptLog) {
   }
   attempts.push(attempt);
   localStorage.setItem(key, JSON.stringify(attempts));
+  const session = loadSession(attempt.sessionId);
+  if (session) {
+    session.attempts = session.attempts ?? {};
+    session.attempts[attempt.conceptId] = attempts;
+    saveSession(session);
+  }
 }
 
 export function loadAttempts(sessionId: string, conceptId: string): AttemptLog[] {
   if (!hasWindow()) return [];
-  const key = `${ATTEMPT_PREFIX}${sessionId}:${conceptId}`;
+  const key = attemptsKey(sessionId, conceptId);
   const raw = localStorage.getItem(key);
   if (!raw) return [];
   try {
@@ -85,6 +95,56 @@ export function loadAttempts(sessionId: string, conceptId: string): AttemptLog[]
 
 export function clearAttempts(sessionId: string, conceptId: string) {
   if (!hasWindow()) return;
-  const key = `${ATTEMPT_PREFIX}${sessionId}:${conceptId}`;
+  const key = attemptsKey(sessionId, conceptId);
   localStorage.removeItem(key);
+  const session = loadSession(sessionId);
+  if (session?.attempts) {
+    const next = { ...session.attempts };
+    delete next[conceptId];
+    session.attempts = next;
+    saveSession(session);
+  }
+}
+
+export function updateLatestAttemptMeta(
+  sessionId: string,
+  conceptId: string,
+  questionId: string,
+  patch: Partial<AttemptLog>
+) {
+  if (!hasWindow()) return;
+  const key = attemptsKey(sessionId, conceptId);
+  const raw = localStorage.getItem(key);
+  if (!raw) return;
+  try {
+    const attempts = JSON.parse(raw) as AttemptLog[];
+    for (let i = attempts.length - 1; i >= 0; i -= 1) {
+      if (attempts[i].questionId === questionId) {
+        attempts[i] = { ...attempts[i], ...patch };
+        break;
+      }
+    }
+    localStorage.setItem(key, JSON.stringify(attempts));
+    const session = loadSession(sessionId);
+    if (session) {
+      session.attempts = session.attempts ?? {};
+      session.attempts[conceptId] = attempts;
+      saveSession(session);
+    }
+  } catch {
+    // ignore broken storage; treat as best-effort
+  }
+}
+
+export function saveFeedbackResult(
+  sessionId: string,
+  conceptId: string,
+  feedback: FeedbackResponse
+) {
+  if (!hasWindow()) return;
+  const session = loadSession(sessionId);
+  if (!session) return;
+  session.feedback = session.feedback ?? {};
+  session.feedback[conceptId] = feedback;
+  saveSession(session);
 }

@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { copy } from "@/lib/copy/en";
 import type { ConceptRef, StudySession } from "@/types/learning";
 import { createSessionId, saveSession } from "@/lib/learning/storage";
+import Skeleton from "./components/ui/Skeleton";
+import { useToast } from "./components/ui/Toast";
+import AppShell from "./components/AppShell";
 
 const sampleContext = `# Module 1: Signals and Noise
 - Distinguish signal vs. noise in metrics and logs
@@ -11,9 +15,9 @@ const sampleContext = `# Module 1: Signals and Noise
 - Quick audit checklist: time window, segment, comparison
 
 # Module 2: Model Lifecycle Basics
-• Framing a question, defining success metrics
-• Data readiness review: leakage checks, missing data patterns
-• Monitoring drift and feedback loops after launch
+- Framing a question, defining success metrics
+- Data readiness review: leakage checks, missing data patterns
+- Monitoring drift and feedback loops after launch
 
 # Module 3: Communicating Findings
 1) Lead with the decision and risk trade-offs
@@ -22,6 +26,7 @@ const sampleContext = `# Module 1: Signals and Noise
 
 export default function HomePage() {
   const router = useRouter();
+  const { addToast } = useToast();
   const [courseTitle, setCourseTitle] = useState("");
   const [context, setContext] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,7 +35,7 @@ export default function HomePage() {
   const handleGenerate = async () => {
     setError(null);
     if (!context.trim()) {
-      setError("Please paste a syllabus or notes first.");
+      setError(copy.home.missingContext);
       return;
     }
     setLoading(true);
@@ -55,6 +60,7 @@ export default function HomePage() {
         cards: {}
       };
       saveSession(session);
+      addToast(copy.toast.saved, "success");
       router.push(`/learn?session=${sessionId}`);
     } catch (err) {
       setError((err as Error).message);
@@ -75,36 +81,53 @@ export default function HomePage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-10">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold text-white">AI Self-Study Capsule</h1>
-        <p className="text-sm text-slate-400">
-          Paste your syllabus or notes, generate concepts, then drill with Cornell cards and quick
-          checks. All data stays in your browser.
+    <AppShell>
+      <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
+        <section className="space-y-5">
+        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-300/80">
+          {copy.common.learn} / {copy.common.practice} / {copy.common.feedback}
         </p>
-      </header>
+        <h1 className="text-4xl font-semibold tracking-tight text-slate-50">{copy.home.title}</h1>
+        <p className="max-w-2xl text-base leading-relaxed text-slate-300">{copy.home.subtitle}</p>
+        <div className="grid gap-3 text-sm text-slate-300">
+          {copy.home.trust.map((item) => (
+            <div key={item} className="inline-flex items-center gap-2 text-slate-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.7)]" />
+              {item}
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button className="btn-primary" onClick={handleGenerate} disabled={loading}>
+            {copy.home.heroCta}
+          </button>
+          <button className="btn-secondary" onClick={handleLoadSample} disabled={loading}>
+            {copy.home.heroSubCta}
+          </button>
+        </div>
+        </section>
 
-      <section className="card space-y-4">
+        <section className="surface-card-strong space-y-5">
         <div className="grid gap-3">
-          <label className="text-sm text-slate-300">
-            Course Title (optional)
+          <label className="text-sm text-slate-200">
+            {copy.home.courseLabel}
             <input
               className="input mt-1"
               value={courseTitle}
               onChange={(e) => setCourseTitle(e.target.value)}
-              placeholder="e.g., Introduction to Data Analytics"
+              placeholder={copy.home.coursePlaceholder}
             />
           </label>
         </div>
 
         <div>
-          <label className="text-sm text-slate-300">
-            Syllabus / Notes
+          <label className="text-sm text-slate-200">
+            {copy.home.contextLabel}
             <textarea
-              className="input mt-1 min-h-[260px] resize-none"
+              className="textarea mt-1 min-h-[260px]"
               value={context}
               onChange={(e) => setContext(e.target.value)}
-              placeholder="Paste headings, bullets, and key points here..."
+              placeholder={copy.home.contextPlaceholder}
             />
           </label>
         </div>
@@ -113,26 +136,37 @@ export default function HomePage() {
 
         <div className="flex flex-wrap gap-3">
           <button className="btn-primary" onClick={handleGenerate} disabled={loading}>
-            {loading ? "Generating..." : "Generate Concepts"}
+            {loading ? copy.home.generating : copy.home.generate}
           </button>
           <button className="btn-secondary" onClick={handleLoadSample} disabled={loading}>
-            Load Sample
+            {copy.home.loadSample}
           </button>
           <button className="btn-secondary" onClick={handleClear} disabled={loading}>
-            Clear
+            {copy.home.clear}
           </button>
         </div>
-      </section>
 
-      <section className="card">
-        <h2 className="text-lg font-semibold text-white">How it works</h2>
-        <ol className="mt-2 space-y-2 text-sm text-slate-300">
-          <li>1) Paste your syllabus or notes.</li>
-          <li>2) Generate concepts and open one to view a Cornell card.</li>
-          <li>3) Answer quick checks and save attempts.</li>
-          <li>4) View feedback to see barriers and suggested tactics.</li>
-        </ol>
-      </section>
-    </main>
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        ) : null}
+        </section>
+
+        <section className="lg:col-span-2">
+          <div className="grid gap-4 md:grid-cols-3">
+          {copy.home.steps.map((step, idx) => (
+            <div key={step} className="surface-card space-y-2">
+              <p className="text-sm font-semibold text-emerald-300">{idx + 1}</p>
+              <p className="text-lg font-semibold text-slate-50">{step}</p>
+              <p className="text-sm text-slate-300">{copy.home.stepDetails[idx]}</p>
+            </div>
+          ))}
+          </div>
+        </section>
+      </div>
+    </AppShell>
   );
 }

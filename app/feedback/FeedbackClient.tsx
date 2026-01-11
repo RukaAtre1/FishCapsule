@@ -30,6 +30,10 @@ export default function FeedbackClient() {
   useEffect(() => {
     const fetchAssessment = async () => {
       if (!concept) return;
+      if (attempts.length === 0) {
+        setAssessment(null);
+        return;
+      }
       try {
         const res = await fetch("/api/diagnose", {
           method: "POST",
@@ -82,7 +86,20 @@ export default function FeedbackClient() {
 
       {error && <p className="text-sm text-rose-400">{error}</p>}
 
-      {assessment ? (
+      {attempts.length === 0 ? (
+        <section className="card space-y-3">
+          <h2 className="text-lg font-semibold text-white">Get started</h2>
+          <p className="text-slate-300">
+            No attempts yet. Try 1 MCQ + 1 short answer, then return for diagnosis.
+          </p>
+          <button
+            className="btn-primary w-fit"
+            onClick={() => router.push(`/learn/${conceptId}?session=${sessionId}`)}
+          >
+            Go to Quick Check
+          </button>
+        </section>
+      ) : assessment ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="card space-y-3">
             <h2 className="text-lg font-semibold text-white">Summary</h2>
@@ -111,7 +128,7 @@ export default function FeedbackClient() {
               {assessment.topBarriers.map((barrier, idx) => (
                 <li key={idx} className="rounded-lg bg-slate-800 px-3 py-2">
                   <p className="font-semibold text-white">
-                    {barrier.id} — {barrier.severity}
+                    {barrier.id} - {barrier.severity}
                   </p>
                   <ul className="list-disc pl-4 text-sm">
                     {barrier.evidence.map((ev, j) => (
