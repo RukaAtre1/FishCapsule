@@ -3,7 +3,7 @@
 type Props = {
   children: React.ReactNode;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: React.ElementType;
 };
 
 export default function Shell({ children, className, as: Component = "main" }: Props) {
