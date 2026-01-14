@@ -18,6 +18,16 @@ export const env = {
  * Should be called at the start of API routes or app initialization.
  */
 export function validateEnv() {
+    // Log env presence (booleans only) for debugging in production
+    if (process.env.NODE_ENV === "production" || process.env.DEBUG_ENV === "true") {
+        console.log("[Server Config] Env Var Check:", {
+            ZAI_API_KEY: !!process.env.ZAI_API_KEY,
+            GLM_MODEL: !!process.env.GLM_MODEL,
+            GLM_BASE_URL: !!process.env.GLM_BASE_URL,
+            NODE_ENV: process.env.NODE_ENV
+        });
+    }
+
     const missing: string[] = [];
 
     if (!env.ZAI_API_KEY) {
