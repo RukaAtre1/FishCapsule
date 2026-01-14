@@ -42,7 +42,8 @@ export default function LearnClient() {
   const conceptProgress = useMemo(() => {
     if (!session) return {};
     const feedback = session.feedback ?? {};
-    return session.concepts.reduce<Record<
+    const concepts = session.concepts ?? []; // Handle optional
+    return concepts.reduce<Record<
       string,
       { attempts: number; due: DueStatus; needFix: boolean }
     >>((acc, concept) => {
@@ -80,7 +81,8 @@ export default function LearnClient() {
       }
     >();
 
-    session.concepts.forEach((concept) => {
+    const concepts = session.concepts ?? [];
+    concepts.forEach((concept) => {
       const { moduleNumber, cleanTitle } = parseModule(concept.title);
       const key = moduleNumber ? `module-${moduleNumber}` : "other";
       const next = map.get(key) ?? {
@@ -197,7 +199,7 @@ export default function LearnClient() {
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--muted)]">
             <span className="rounded-full border border-[color:var(--border)] px-3 py-1">
-              {session.concepts.length} concepts
+              {(session.concepts || []).length} concepts
             </span>
             <span className="rounded-full border border-[color:var(--border)] px-3 py-1">
               {copy.common.attempts}: {totalAttempts}
@@ -208,11 +210,10 @@ export default function LearnClient() {
           {filtersConfig.map((tab) => (
             <button
               key={tab.id}
-              className={`chip transition ${
-                filters === tab.id
-                  ? "border-[color:var(--accent)]/70 bg-[color:var(--accent)]/18 text-[color:var(--text)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
-                  : "text-[color:var(--muted)] hover:border-[color:var(--accent)]/60 hover:text-[color:var(--text)]"
-              }`}
+              className={`chip transition ${filters === tab.id
+                ? "border-[color:var(--accent)]/70 bg-[color:var(--accent)]/18 text-[color:var(--text)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
+                : "text-[color:var(--muted)] hover:border-[color:var(--accent)]/60 hover:text-[color:var(--text)]"
+                }`}
               onClick={() => setFilters(tab.id as any)}
               type="button"
             >

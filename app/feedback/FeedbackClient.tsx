@@ -20,7 +20,7 @@ export default function FeedbackClient() {
   useEffect(() => {
     if (!sessionId || !conceptId) return;
     const loadedSession = loadSession(sessionId);
-    const conceptMatch = loadedSession?.concepts.find((c) => c.id === conceptId) ?? null;
+    const conceptMatch = (loadedSession?.concepts ?? []).find((c) => c.id === conceptId) ?? null;
     setSession(loadedSession ?? null);
     setConcept(conceptMatch);
     const attemptsForConcept = loadAttempts(sessionId, conceptId);

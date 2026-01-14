@@ -2,243 +2,100 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-  --bg0: #0d1424;
-  --bg1: #0a1020;
-  --surface: #0f1a2e;
-  --surface2: #0b1324;
-  --border: rgba(255, 255, 255, 0.08);
-  --text: #e8edf7;
-  --muted: #9fb1ce;
-  --accent: #2dd4bf;
-  --accent2: #7ab6ff;
-  --shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
-  --glow: 0 12px 38px rgba(45, 212, 191, 0.3);
-  --card-radius: 18px;
+@layer base {
+  :root {
+    /* Base - Off-black somewhat inspired by Linear/Arc */
+    --background: 223 24% 6%;
+    /* #0B0D12 */
+    --foreground: 222 16% 86%;
+    /* #D6D9E0 */
+
+    /* Surface Hierarchy */
+    --card: 227 19% 9%;
+    /* #13151C */
+    --card-foreground: 222 16% 86%;
+
+    --popover: 225 21% 7%;
+    /* #0F1117 */
+    --popover-foreground: 222 16% 86%;
+
+    /* Primary - Lavender Brand */
+    --primary: 265 77% 91%;
+    /* #E4D4FA */
+    --primary-foreground: 267 40% 15%;
+    /* Dark for contrast on lavender */
+
+    /* Secondary - slightly lighter surface for inputs/buttons */
+    --secondary: 229 19% 11%;
+    /* #171922 */
+    --secondary-foreground: 222 16% 86%;
+
+    /* Muted - For metadata/help text */
+    --muted: 223 24% 6%;
+    /* Background context */
+    --muted-foreground: 218 14% 65%;
+    /* #9AA3B2 */
+
+    /* Accent - Cyan for focus/selection (sparingly) */
+    --accent: 189 100% 50%;
+    /* #00D9FF */
+    --accent-foreground: 189 100% 10%;
+
+    /* Destructive - Red */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders & Inputs */
+    --border: 217 19% 27%;
+    /* Subtle gray for borders */
+    --input: 229 19% 16%;
+    /* Input background/border */
+    --ring: 265 77% 91%;
+    /* Focus ring (matches primary lavender) */
+
+    --radius: 0.75rem;
+    /* 12px rounded corners */
+  }
+
+  .dark {
+    --background: 223 24% 6%;
+    --foreground: 222 16% 86%;
+    --card: 227 19% 9%;
+    --card-foreground: 222 16% 86%;
+    --popover: 225 21% 7%;
+    --popover-foreground: 222 16% 86%;
+    --primary: 265 77% 91%;
+    --primary-foreground: 267 40% 15%;
+    --secondary: 229 19% 11%;
+    --secondary-foreground: 222 16% 86%;
+    --muted: 223 24% 6%;
+    --muted-foreground: 218 14% 65%;
+    --accent: 189 100% 50%;
+    --accent-foreground: 189 100% 10%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 10% 20%;
+    --input: 229 19% 16%;
+    --ring: 265 77% 91%;
+  }
 }
 
-:root[data-theme="midnight"] {
-  color-scheme: dark;
-  --bg0: #020408;
-  --bg1: #071020;
-  --surface: #0a1428;
-  --surface2: #061018;
-  --border: rgba(100, 180, 255, 0.18);
-  --text: #edf2fc;
-  --muted: #8aa4c8;
-  --accent: #00ffcc;
-  --accent2: #6db3ff;
-  --shadow: 0 34px 90px rgba(0, 0, 0, 0.65);
-  --glow: 0 16px 46px rgba(0, 255, 204, 0.25);
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    /* Subtle noise texture */
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(228, 212, 250, 0.05) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    background-attachment: fixed;
+  }
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg0: #0f1726;
-  --bg1: #131d31;
-  --surface: #161f33;
-  --surface2: #111a2c;
-  --border: rgba(255, 255, 255, 0.1);
-  --text: #e6ebf5;
-  --muted: #a7b6cc;
-  --accent: #60a5fa;
-  --accent2: #34d399;
-  --shadow: 0 26px 72px rgba(0, 0, 0, 0.4);
-  --glow: 0 16px 46px rgba(96, 165, 250, 0.28);
-}
-
-:root[data-theme="light"] {
-  color-scheme: light;
-  --bg0: #faf9f7;
-  --bg1: #f0ede8;
-  --surface: #ffffff;
-  --surface2: #f5f2ed;
-  --border: rgba(15, 23, 42, 0.15);
-  --text: #1e293b;
-  --muted: #64748b;
-  --accent: #2563eb;
-  --accent2: #0891b2;
-  --shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-  --glow: 0 12px 34px rgba(37, 99, 235, 0.18);
-}
-
-* {
-  @apply outline-none;
-}
-
-html {
-  background: var(--bg0);
-}
-
-body {
-  @apply min-h-screen antialiased;
-  line-height: 1.6;
-  color: var(--text);
-  background:
-    radial-gradient(circle at 12% 20%, color-mix(in srgb, var(--accent2) 14%, transparent) 0, transparent 32%),
-    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent) 18%, transparent) 0, transparent 38%),
-    radial-gradient(circle at 25% 84%, color-mix(in srgb, var(--accent2) 12%, transparent) 0, transparent 40%),
-    linear-gradient(145deg, color-mix(in srgb, var(--bg1) 80%, transparent), var(--bg0));
-  position: relative;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(600px 400px at 70% 20%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 65%),
-    radial-gradient(500px 360px at 10% 85%, color-mix(in srgb, var(--accent2) 10%, transparent), transparent 70%);
-  opacity: 0.65;
-  mix-blend-mode: screen;
-  filter: blur(18px);
-  z-index: -1;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
-  opacity: 0.08;
-  mix-blend-mode: soft-light;
-  z-index: -1;
-}
-
-a {
-  color: var(--accent);
-}
-
-::selection {
-  background: color-mix(in srgb, var(--accent) 30%, transparent);
-  color: var(--text);
-}
-
-.surface-card {
-  background: linear-gradient(160deg, color-mix(in srgb, var(--surface2) 88%, transparent), color-mix(in srgb, var(--surface) 92%, transparent));
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  box-shadow: var(--shadow);
-  border-radius: var(--card-radius);
-  @apply backdrop-blur-xl p-5;
-}
-
-.surface-card-strong {
-  background: linear-gradient(150deg, color-mix(in srgb, var(--surface) 96%, transparent), color-mix(in srgb, var(--surface2) 90%, transparent));
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  box-shadow: var(--shadow);
-  border-radius: var(--card-radius);
-  @apply backdrop-blur-xl p-6;
-}
-
-.card {
-  @apply surface-card;
-}
-
+/* Custom Utilities if needed, but prefer shadcn */
 .glass-card {
-  background: linear-gradient(120deg, color-mix(in srgb, var(--surface2) 88%, transparent), color-mix(in srgb, var(--surface) 86%, transparent));
-  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
-  box-shadow: var(--shadow);
-  border-radius: var(--card-radius);
-  @apply backdrop-blur-xl p-5;
-}
-
-.btn {
-  @apply inline-flex items-center justify-center rounded-full px-4 py-2 font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-60;
-  transform: translateY(0);
-  border: 1px solid transparent;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-}
-
-.btn:active {
-  transform: translateY(0);
-}
-
-.btn-primary {
-  @apply btn shadow-[0_18px_40px_rgba(0,0,0,0.35)];
-  color: var(--text);
-  background: linear-gradient(115deg, color-mix(in srgb, var(--accent) 95%, transparent), color-mix(in srgb, var(--accent2) 90%, transparent));
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  box-shadow: var(--glow);
-}
-
-.btn-secondary {
-  @apply btn;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-  border-color: color-mix(in srgb, var(--border) 90%, transparent);
-  color: var(--text);
-}
-
-.btn-glass {
-  @apply btn;
-  background: color-mix(in srgb, var(--surface2) 75%, transparent);
-  border-color: color-mix(in srgb, var(--border) 90%, transparent);
-  color: var(--text);
-}
-
-.chip {
-  @apply inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold;
-  border-color: color-mix(in srgb, var(--border) 90%, transparent);
-  background: color-mix(in srgb, var(--surface2) 80%, transparent);
-  color: var(--text);
-}
-
-.badge {
-  @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide;
-  border-color: color-mix(in srgb, var(--border) 90%, transparent);
-  background: color-mix(in srgb, var(--surface2) 85%, transparent);
-  color: var(--text);
-}
-
-.input {
-  @apply w-full rounded-xl border px-3 py-2 text-sm placeholder-slate-500 transition duration-150;
-  background: color-mix(in srgb, var(--surface2) 78%, transparent);
-  border-color: color-mix(in srgb, var(--border) 90%, transparent);
-  color: var(--text);
-}
-
-.textarea {
-  @apply input;
-  @apply resize-none;
-}
-
-.input:focus,
-.textarea:focus,
-.btn:focus-visible {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
-}
-
-.input::placeholder,
-.textarea::placeholder {
-  color: color-mix(in srgb, var(--muted) 75%, transparent);
-}
-
-.skeleton {
-  position: relative;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--surface2) 70%, transparent);
-  border-radius: 12px;
-}
-
-.skeleton::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent2) 18%, transparent), transparent);
-  animation: shimmer 1.2s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+  @apply bg-card/80 backdrop-blur-md border border-border/50 shadow-lg;
 }

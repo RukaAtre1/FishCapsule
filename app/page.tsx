@@ -18,7 +18,7 @@ export default function Home() {
         {/* Optional Call to Action Button for future phases */}
         <div className="mt-8 relative z-20">
           <a
-            href="/ingestion"
+            href="/ingest"
             className="px-8 py-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all duration-300 backdrop-blur-sm shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.4)] cursor-pointer inline-block"
           >
             Launch

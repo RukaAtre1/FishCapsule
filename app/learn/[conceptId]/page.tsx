@@ -35,7 +35,8 @@ export default function ConceptPage({ params }: Props) {
     const loaded = loadSession(sessionId);
     if (loaded) {
       setSession(loaded);
-      const found = loaded.concepts.find((c) => c.id === conceptId) || null;
+      const concepts = loaded.concepts ?? [];
+      const found = concepts.find((c) => c.id === conceptId) || null;
       setConcept(found);
       if (loaded.cards?.[conceptId]) {
         setCard(loaded.cards[conceptId]);

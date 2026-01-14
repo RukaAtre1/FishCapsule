@@ -7,6 +7,70 @@ type LlmResult =
 const defaultModel = process.env.GLM_MODEL ?? "glm-4.5-flash";
 const defaultBase = process.env.GLM_BASE_URL ?? "https://api.z.ai/api/paas/v4";
 
+/**
+ * Extract JSON from a string that may have extra text before/after
+ */
+function extractJSON(raw: string): string | null {
+  // Find the first { or [
+  const braceIndex = raw.indexOf("{");
+  const bracketIndex = raw.indexOf("[");
+
+  if (braceIndex < 0 && bracketIndex < 0) return null;
+
+  // Determine which comes first
+  let start: number;
+  let openChar: string;
+  let closeChar: string;
+
+  if (braceIndex >= 0 && (bracketIndex < 0 || braceIndex < bracketIndex)) {
+    start = braceIndex;
+    openChar = "{";
+    closeChar = "}";
+  } else {
+    start = bracketIndex;
+    openChar = "[";
+    closeChar = "]";
+  }
+
+  // Find matching closing bracket
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = start; i < raw.length; i++) {
+    const char = raw[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escape = true;
+      continue;
+    }
+
+    if (char === '"' && !escape) {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (char === openChar) {
+      depth++;
+    } else if (char === closeChar) {
+      depth--;
+      if (depth === 0) {
+        return raw.slice(start, i + 1);
+      }
+    }
+  }
+
+  // If we didn't find a match, return from start to end
+  return raw.slice(start);
+}
+
 export async function callGLM(
   messages: Message[],
   model = defaultModel,
@@ -47,16 +111,18 @@ export async function callGLM(
       return { ok: false, error: { code: "empty_response", message: "No content from GLM." } };
     }
 
-    const braceIndex = raw.indexOf("{");
-    const bracketIndex = raw.indexOf("[");
-    const candidates = [braceIndex, bracketIndex].filter((i) => i >= 0);
-    const start = candidates.length ? Math.min(...candidates) : -1;
-    const payloadText = start >= 0 && start < raw.length ? raw.slice(start) : raw.trim();
+    // Extract JSON, handling extra text before/after
+    const jsonText = extractJSON(raw);
+    if (!jsonText) {
+      return { ok: false, error: { code: "no_json", message: "No JSON found in response" } };
+    }
 
     try {
-      const value = JSON.parse(payloadText);
+      const value = JSON.parse(jsonText);
       return { ok: true, value };
     } catch (err) {
+      // Log the raw content for debugging
+      console.error("JSON parse error. Raw content:", raw.slice(0, 500));
       return {
         ok: false,
         error: { code: "parse_error", message: `Failed to parse GLM JSON: ${(err as Error).message}` }

@@ -1,5 +1,84 @@
 import { z } from "zod";
 
+// ============ Outline & Course Schemas ============
+
+export const LectureNodeSchema = z.object({
+    lectureId: z.string().min(1),
+    week: z.string().nullable().optional(),
+    date: z.string().nullable().optional(),
+    title: z.string().min(1).max(200),
+    topics: z.array(z.string()).min(1).max(10),
+    deliverables: z.array(z.string()).nullable().optional(),
+    readings: z.array(z.string()).nullable().optional(),
+    deckId: z.string().nullable().optional(),
+});
+
+export const OutlineResponseSchema = z.object({
+    outline: z.array(LectureNodeSchema).min(1).max(50), // Limited for v1.2 demo/perf
+});
+
+// ============ Citation Schema ============
+
+export const CitationSchema = z.object({
+    page: z.number().int().min(1),
+    chunkId: z.string().min(1),
+    snippet: z.string().max(200).optional(),
+});
+
+// ============ SlideExplain Schema ============
+
+export const SlideExplainQuickCheckSchema = z.object({
+    question: z.string().min(5),
+    choices: z.array(z.string()).optional(),
+    answer: z.string().min(1),
+    explanation: z.string().min(10),
+});
+
+export const SlideExplainSchema = z.object({
+    lectureId: z.string().min(1),
+    deckId: z.string().optional(),
+    pages: z.union([
+        z.array(z.number().int().min(1)),
+        z.object({ start: z.number().int().min(1), end: z.number().int().min(1) }),
+    ]),
+    titleGuess: z.string().max(200).optional(),
+    keyPoints: z.array(z.string().min(5)).min(1).max(10),
+    whyItMatters: z.array(z.string().min(5)).min(1).max(5),
+    examAngles: z.array(z.string().min(5)).min(1).max(5),
+    commonMistakes: z.array(z.string().min(5)).min(1).max(5),
+    quickCheck: SlideExplainQuickCheckSchema,
+    citations: z.array(CitationSchema).min(1).max(20),
+});
+
+export const SlideExplainResponseSchema = z.object({
+    slideExplain: SlideExplainSchema,
+});
+
+// ============ ConceptModule Schema ============
+
+export const ConceptModuleSchema = z.object({
+    conceptId: z.string().min(1),
+    lectureId: z.string().min(1),
+    pageRef: z.union([
+        z.number().int().min(1),
+        z.object({ start: z.number().int().min(1), end: z.number().int().min(1) }),
+    ]).optional(),
+    title: z.string().min(1).max(200),
+    oneLiner: z.string().min(10).max(300),
+    intuition: z.array(z.string().min(5)).min(2).max(4),
+    vividExample: z.string().min(20),
+    miniMathOrPseudo: z.string().optional(),
+    commonTraps: z.array(z.string().min(5)).min(2).max(4),
+    quickCheck: SlideExplainQuickCheckSchema,
+    citations: z.array(CitationSchema).min(1).max(10),
+});
+
+export const ConceptModulesResponseSchema = z.object({
+    conceptModules: z.array(ConceptModuleSchema).min(1).max(10),
+});
+
+
+
 // ============ QuickCheck Schemas ============
 
 export const QuickCheckMCQSchema = z.object({
@@ -130,3 +209,5 @@ export type CornellCardOutput = z.infer<typeof CornellCardSchema>;
 export type FeedbackOutput = z.infer<typeof FeedbackResponseSchema>;
 export type DiagnoseOutput = z.infer<typeof BarrierAssessmentSchema>;
 export type OutputMeta = z.infer<typeof OutputMetaSchema>;
+export type LectureNode = z.infer<typeof LectureNodeSchema>;
+export type OutlineResponse = z.infer<typeof OutlineResponseSchema>;

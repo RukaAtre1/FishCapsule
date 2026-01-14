@@ -1,4 +1,34 @@
+import type { LectureNode } from "@/lib/llm/schema";
+
 export type ConceptRef = { id: string; title: string; description: string };
+
+// SlideExplain types
+export type Citation = {
+  page: number;
+  chunkId: string;
+  snippet?: string;
+};
+
+export type SlideExplainQuickCheck = {
+  question: string;
+  choices?: string[];
+  answer: string;
+  explanation: string;
+};
+
+export type SlideExplain = {
+  lectureId: string;
+  deckId?: string;
+  pages: number[] | { start: number; end: number };
+  titleGuess?: string;
+  keyPoints: string[];
+  whyItMatters: string[];
+  examAngles: string[];
+  commonMistakes: string[];
+  quickCheck: SlideExplainQuickCheck;
+  citations: Citation[];
+};
+
 
 export type QuickCheckMCQ = {
   id: string;
@@ -126,8 +156,10 @@ export type DueStatus = "due_today" | "due_soon" | "mastered" | "scheduled" | "n
 export type StudySession = {
   sessionId: string;
   courseTitle?: string;
-  context: string;
-  concepts: ConceptRef[];
+  syllabusText: string;
+  outline: LectureNode[];
+  context?: string; // Legacy? Keeping for compatibility
+  concepts?: ConceptRef[]; // Legacy? Keeping
   createdAt: number;
   cards?: Record<string, CornellCard>;
   attempts?: Record<string, AttemptLog[]>;

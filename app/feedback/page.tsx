@@ -35,7 +35,7 @@ function FeedbackContent() {
     }
 
     const loaded = loadSession(sessionId);
-    const concept = loaded?.concepts.find((c) => c.id === conceptId) || null;
+    const concept = (loaded?.concepts ?? []).find((c) => c.id === conceptId) || null;
     setConceptTitle(concept?.title ?? "");
     const attemptList = loadAttempts(sessionId, conceptId);
     setAttempts(attemptList);
@@ -132,104 +132,104 @@ function FeedbackContent() {
   return (
     <Shell>
       <div className="flex min-h-screen flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <p className="text-sm text-slate-400">
-          {copy.common.session} {sessionId}
-        </p>
-        <h1 className="text-3xl font-semibold text-white">
-          {copy.feedback.titlePrefix} {conceptTitle || copy.practice.placeholderConcept}
-        </h1>
-        <p className="text-sm text-slate-400">
-          {copy.feedback.attemptsNote.replace("{count}", attempts.length.toString())}
-        </p>
-        <div className="mt-2 flex gap-2">
-          <button
-            className="btn-glass"
-            onClick={() => router.push(`/learn/${conceptId}?session=${sessionId}`)}
-          >
-            {copy.feedback.backToConcept}
-          </button>
-        </div>
-      </header>
+        <header className="flex flex-col gap-3">
+          <p className="text-sm text-slate-400">
+            {copy.common.session} {sessionId}
+          </p>
+          <h1 className="text-3xl font-semibold text-white">
+            {copy.feedback.titlePrefix} {conceptTitle || copy.practice.placeholderConcept}
+          </h1>
+          <p className="text-sm text-slate-400">
+            {copy.feedback.attemptsNote.replace("{count}", attempts.length.toString())}
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              className="btn-glass"
+              onClick={() => router.push(`/learn/${conceptId}?session=${sessionId}`)}
+            >
+              {copy.feedback.backToConcept}
+            </button>
+          </div>
+        </header>
 
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+        {error && <p className="text-sm text-rose-400">{error}</p>}
 
-      {attempts.length === 0 ? (
-        <section className="glass-card space-y-3">
-          <h2 className="text-lg font-semibold text-white">{copy.feedback.noAttemptsTitle}</h2>
-          <p className="text-slate-300">{copy.feedback.noAttemptsBody}</p>
-          <button
-            className="btn-primary w-fit"
-            onClick={() => router.push(`/practice?session=${sessionId}&conceptId=${conceptId}`)}
-          >
-            {copy.feedback.goPractice}
-          </button>
-        </section>
-      ) : loading && !feedback ? (
-        <div className="space-y-3">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-      ) : feedback ? (
-        <div className="space-y-4">
+        {attempts.length === 0 ? (
           <section className="glass-card space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold text-white">{copy.feedback.diagnosisTitle}</h2>
-              <span className="chip">
-                {mappedBarrier?.name || feedback.barrier}
-              </span>
-            </div>
-            <TypeIn
-              lines={[
-                `${mappedBarrier?.description ?? ""}`,
-                feedback.evidence
-              ].filter(Boolean)}
-              className="space-y-1 text-sm text-slate-300"
-            />
+            <h2 className="text-lg font-semibold text-white">{copy.feedback.noAttemptsTitle}</h2>
+            <p className="text-slate-300">{copy.feedback.noAttemptsBody}</p>
+            <button
+              className="btn-primary w-fit"
+              onClick={() => router.push(`/practice?session=${sessionId}&conceptId=${conceptId}`)}
+            >
+              {copy.feedback.goPractice}
+            </button>
           </section>
-
-          <section className="glass-card space-y-3">
-            <h3 className="text-lg font-semibold text-white">{copy.feedback.tacticsTitle}</h3>
-            <div className="grid gap-2 md:grid-cols-2">
-              {feedback.tactics.map((tactic, idx) => (
-                <div key={idx} className="surface-card space-y-1">
-                  <p className="text-sm font-semibold text-white">{tactic.title}</p>
-                  <p className="text-sm text-slate-300">{tactic.description}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {feedback.microDrill ? (
+        ) : loading && !feedback ? (
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        ) : feedback ? (
+          <div className="space-y-4">
             <section className="glass-card space-y-3">
-              <h3 className="text-lg font-semibold text-white">{copy.feedback.microDrillTitle}</h3>
-              <MicroDrill
-                task={feedback.microDrill.task}
-                hint={feedback.microDrill.hint}
-                answer={feedback.microDrill.answer}
-                onComplete={handleDrillComplete}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-lg font-semibold text-white">{copy.feedback.diagnosisTitle}</h2>
+                <span className="chip">
+                  {mappedBarrier?.name || feedback.barrier}
+                </span>
+              </div>
+              <TypeIn
+                lines={[
+                  `${mappedBarrier?.description ?? ""}`,
+                  feedback.evidence
+                ].filter(Boolean)}
+                className="space-y-1 text-sm text-slate-300"
               />
             </section>
-          ) : null}
 
-          <section className="glass-card space-y-3">
-            <h3 className="text-lg font-semibold text-white">{copy.feedback.retestTitle}</h3>
-            <p className="text-slate-300">{feedback.retestPlan}</p>
-            {showRetestButton ? (
-              <button
-                className="btn-primary w-fit"
-                onClick={handleRetest}
-                disabled={!microDrillDone}
-              >
-                {microDrillDone ? copy.feedback.retestReady : copy.feedback.retestLocked}
-              </button>
+            <section className="glass-card space-y-3">
+              <h3 className="text-lg font-semibold text-white">{copy.feedback.tacticsTitle}</h3>
+              <div className="grid gap-2 md:grid-cols-2">
+                {feedback.tactics.map((tactic, idx) => (
+                  <div key={idx} className="surface-card space-y-1">
+                    <p className="text-sm font-semibold text-white">{tactic.title}</p>
+                    <p className="text-sm text-slate-300">{tactic.description}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {feedback.microDrill ? (
+              <section className="glass-card space-y-3">
+                <h3 className="text-lg font-semibold text-white">{copy.feedback.microDrillTitle}</h3>
+                <MicroDrill
+                  task={feedback.microDrill.task}
+                  hint={feedback.microDrill.hint}
+                  answer={feedback.microDrill.answer}
+                  onComplete={handleDrillComplete}
+                />
+              </section>
             ) : null}
-          </section>
-        </div>
-      ) : (
-        <p className="text-slate-300">{copy.feedback.loadingFeedback}</p>
-      )}
+
+            <section className="glass-card space-y-3">
+              <h3 className="text-lg font-semibold text-white">{copy.feedback.retestTitle}</h3>
+              <p className="text-slate-300">{feedback.retestPlan}</p>
+              {showRetestButton ? (
+                <button
+                  className="btn-primary w-fit"
+                  onClick={handleRetest}
+                  disabled={!microDrillDone}
+                >
+                  {microDrillDone ? copy.feedback.retestReady : copy.feedback.retestLocked}
+                </button>
+              ) : null}
+            </section>
+          </div>
+        ) : (
+          <p className="text-slate-300">{copy.feedback.loadingFeedback}</p>
+        )}
       </div>
     </Shell>
   );

@@ -44,7 +44,8 @@ function PracticeContent() {
       setError(copy.practice.sessionMissing);
       return;
     }
-    setConceptTitle(session.concepts.find((c) => c.id === conceptId)?.title ?? "");
+    const concepts = session.concepts ?? [];
+    setConceptTitle(concepts.find((c) => c.id === conceptId)?.title ?? "");
     const attempts = loadAttempts(sessionId, conceptId);
     setAttemptCount(attempts.length);
 
@@ -64,7 +65,7 @@ function PracticeContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             conceptId,
-            conceptTitle: session.concepts.find((c) => c.id === conceptId)?.title,
+            conceptTitle: (session.concepts ?? []).find((c) => c.id === conceptId)?.title,
             context: session.context
           }),
           signal: controller.signal
@@ -247,11 +248,10 @@ function PracticeContent() {
                     {variantLadderOptions().map((opt) => (
                       <button
                         key={opt.id}
-                        className={`rounded-full border px-3 py-1 transition ${
-                          ladder === opt.id
-                            ? "border-[color:var(--accent)]/70 bg-[color:var(--accent)]/18 text-[color:var(--text)]"
-                            : "border-[color:var(--border)] bg-[color:var(--surface2)]/80 text-[color:var(--muted)] hover:border-[color:var(--accent)]/60 hover:text-[color:var(--text)]"
-                        }`}
+                        className={`rounded-full border px-3 py-1 transition ${ladder === opt.id
+                          ? "border-[color:var(--accent)]/70 bg-[color:var(--accent)]/18 text-[color:var(--text)]"
+                          : "border-[color:var(--border)] bg-[color:var(--surface2)]/80 text-[color:var(--muted)] hover:border-[color:var(--accent)]/60 hover:text-[color:var(--text)]"
+                          }`}
                         onClick={() => setLadder(opt.id)}
                         type="button"
                       >
