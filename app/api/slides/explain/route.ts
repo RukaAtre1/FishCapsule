@@ -126,6 +126,7 @@ Generate a detailed explanation.`,
             console.error("GLM Error:", result.error);
             return NextResponse.json({
                 error: result.error.message,
+                code: result.error.code,
                 meta: {
                     source: "fallback",
                     latencyMs: Date.now() - start,

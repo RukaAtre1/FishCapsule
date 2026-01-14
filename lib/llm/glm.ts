@@ -1,11 +1,13 @@
+import { env, validateEnv } from "@/lib/env";
+
 type Message = { role: "system" | "user" | "assistant"; content: string };
 
 type LlmResult =
   | { ok: true; value: any }
   | { ok: false; error: { code: string; message: string } };
 
-const defaultModel = process.env.GLM_MODEL ?? "glm-4.5-flash";
-const defaultBase = process.env.GLM_BASE_URL ?? "https://api.z.ai/api/paas/v4";
+const defaultModel = env.GLM_MODEL;
+const defaultBase = env.GLM_BASE_URL;
 
 /**
  * Extract JSON from a string that may have extra text before/after
@@ -76,10 +78,14 @@ export async function callGLM(
   model = defaultModel,
   options: { timeoutMs?: number } = {}
 ): Promise<LlmResult> {
-  const apiKey = process.env.ZAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("ZAI_API_KEY missing");
+  // Validate env before proceeding
+  try {
+    validateEnv();
+  } catch (err: any) {
+    return { ok: false, error: { code: "MISSING_ENV", message: err.message } };
   }
+
+  const apiKey = env.ZAI_API_KEY;
 
   const controller = new AbortController();
   const timeoutMs = options.timeoutMs ?? 12000;

@@ -32,6 +32,11 @@ export default function IngestPage() {
 
             if (!response.ok) {
                 const errorData = await response.json();
+
+                if (errorData.code === "MISSING_ENV") {
+                    throw new Error("API Key Missing. Please configure ZAI_API_KEY in Vercel settings.");
+                }
+
                 throw new Error(errorData.error || "Failed to generate outline");
             }
 
