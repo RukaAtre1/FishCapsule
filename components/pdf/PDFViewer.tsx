@@ -63,7 +63,10 @@ export default function PDFViewer({ onRangeSelect, onPdfLoaded, maxRangeSize = 5
             const bufferClone = buffer.slice(0);
             pdfBufferRef.current = bufferClone;
 
-            const loadedPdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+            const loadedPdf = await pdfjsLib.getDocument({
+                data: buffer,
+                standardFontDataUrl: "https://unpkg.com/pdfjs-dist@4.8.69/standard_fonts/",
+            }).promise;
 
             clearInterval(progressInterval);
             setUploadProgress(100);

@@ -5,6 +5,7 @@
 export const env = {
     // LLM Config
     ZAI_API_KEY: process.env.ZAI_API_KEY,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GLM_MODEL: process.env.GLM_MODEL || "glm-4.5-flash",
     GLM_BASE_URL: process.env.GLM_BASE_URL || "https://api.z.ai/api/paas/v4",
 
@@ -30,8 +31,8 @@ export function validateEnv() {
 
     const missing: string[] = [];
 
-    if (!env.ZAI_API_KEY) {
-        missing.push("ZAI_API_KEY");
+    if (!env.GEMINI_API_KEY) {
+        missing.push("GEMINI_API_KEY");
     }
 
     if (missing.length > 0) {

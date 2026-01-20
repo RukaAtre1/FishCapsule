@@ -1,14 +1,25 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import TopBar from "./components/TopBar";
 
-const font = Plus_Jakarta_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
+// PRD v2.0: Inter as primary font for better screen readability
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+});
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-jakarta",
+});
 
 export const metadata: Metadata = {
   title: "FishCapsule",
-  description: "Explore the Digital Deep"
+  description: "Agentic Study Notebook - Turn any PDF into a guided learning flow"
 };
 
 export default function RootLayout({
@@ -17,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning data-theme="dark">
-      <body className={`${font.className} bg-[color:var(--bg0)] text-[color:var(--text)]`}>
+    <html lang="en" suppressHydrationWarning data-theme="dark" className={`${inter.variable} ${jakarta.variable}`}>
+      <body className={`${inter.className} bg-[color:var(--bg0)] text-[color:var(--text)]`}>
         <Providers>
           {/* <TopBar /> */}
           {children}

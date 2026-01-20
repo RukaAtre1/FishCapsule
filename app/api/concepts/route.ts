@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ConceptRef } from "@/types/learning";
-import { callGLM } from "@/lib/llm/glm";
+import { generateGeminiResponse } from "@/lib/llm/gemini";
 import { conceptMessages } from "@/lib/llm/prompts";
 import { extractFallbackConcepts, slugify } from "@/lib/learning/extract";
 
@@ -19,23 +19,31 @@ export async function POST(req: Request) {
 
     let concepts: ConceptRef[] | null = null;
 
-    if (process.env.ZAI_API_KEY) {
-      try {
-        const messages = conceptMessages(courseTitle, context);
-        const llm = await callGLM(messages, undefined, { timeoutMs: 12000 });
-        if (llm.ok && llm.value?.concepts) {
-          concepts = (llm.value.concepts as any[]).map((c) => {
-            const title = (c?.title as string) || (c?.name as string) || "Concept";
-            const description =
-              (c?.description as string) || `From syllabus: ${title.slice(0, 80)}`;
-            const id = c?.id ? slugify(String(c.id)) : slugify(title);
-            return { id, title: title.trim(), description: description.trim() };
-          });
-        }
-      } catch (err) {
-        // fall through to deterministic fallback
-        console.error("Concepts LLM fallback:", (err as Error).message);
+    try {
+      const messages = conceptMessages(courseTitle, context);
+
+      const geminiContents = messages.slice(1).map(m => ({
+        role: m.role === "user" ? "user" as const : "model" as const,
+        parts: [{ text: m.content }]
+      }));
+
+      const result = await generateGeminiResponse({
+        systemInstruction: messages[0].content,
+        contents: geminiContents,
+        jsonMode: true,
+        timeoutMs: 15000,
+      });
+
+      if (result.ok && result.value?.concepts) {
+        concepts = (result.value.concepts as any[]).map((c) => {
+          const title = (c?.title as string) || (c?.name as string) || "Concept";
+          const description = (c?.description as string) || `From syllabus: ${title.slice(0, 80)}`;
+          const id = c?.id ? slugify(String(c.id)) : slugify(title);
+          return { id, title: title.trim(), description: description.trim() };
+        });
       }
+    } catch (err) {
+      console.error("Concepts Gemini fallback:", (err as Error).message);
     }
 
     if (!concepts || concepts.length === 0) {

@@ -1,112 +1,76 @@
-FishCapsule Master Implementation Plan
-Status Tracking:
+# FishCapsule v2.0 Implementation Plan
 
-[x] Phase 1: Foundation & UI (StarField, Landing Page) - COMPLETED
+## Goal Description
+Implement PRD v2.0 improvements to fix readability and prevent Gemini free-tier rate-limit failures. Key features include intelligent model routing, batching Step 1 requests, client-side queuing, and UI readability enhancements.
 
-[ ] Phase 2: Data Ingestion (PDF Parsing, API) - CURRENT PRIORITY
+## User Review Required
+> [!IMPORTANT]
+> - **API Change**: `POST /api/study/step1` will now accept an array of pages and return an array of results, replacing the per-page execution.
+> - **UI Change**: Step 1 will skeleton-load all selected pages immediately and populate them on return.
+> - **Model Router**: A new centralized router will manage model selection and fallbacks.
 
-[ ] Phase 3: Intelligence (Concept Extraction, Gemini AI)
+## Proposed Changes
 
-[ ] Phase 4: The Loop (Practice & Feedback)
+### Core Infrastructure
 
-🚨 Phase 2: Data Ingestion (Detailed Steps)
-Goal: Allow users to upload a PDF, parse it on the server, and see the extracted text.
+#### [NEW] [modelRouter.ts](file:///c:/Users/Junhao/Desktop/FishCapsule/lib/ai/modelRouter.ts)
+- Implement `selectModel(task, attempt)` returning model name.
+- Implement `handleGeminiError(error, attempt)` logic for backoff/switching.
+- Task configuration:
+    - `step1_explain`: gemini-2.5-flash-lite -> gemini-2.5-flash -> gemini-3-flash
+    - `step2_synthesize`: gemini-2.5-flash -> gemini-3-flash
+    - `step3_quiz`: gemini-2.5-flash -> gemini-3-flash
+    - `step4_diagnose`: gemini-2.5-flash -> gemini-3-flash
 
-Step 2.1: Backend API Implementation
-File: app/api/parse/route.ts Action: Create or Overwrite with this exact robust logic to fix the 500 Internal Server Error.
+#### [MODIFY] [gemini.ts](file:///c:/Users/Junhao/Desktop/FishCapsule/lib/llm/gemini.ts)
+- Integrate `modelRouter` for model selection and error handling loops.
+- Add structured logging for routing decisions.
 
-TypeScript
+#### [NEW] [queue.ts](file:///c:/Users/Junhao/Desktop/FishCapsule/lib/utils/queue.ts)
+- Simple async queue to limit concurrency (e.g., for retries or background fetches).
 
-import { NextRequest, NextResponse } from "next/server";
-import pdf from "pdf-parse";
+### API Layer
 
-export async function POST(req: NextRequest) {
-  try {
-    const formData = await req.formData();
-    const file = formData.get("file");
+#### [MODIFY] [app/api/study/step1/route.ts](file:///c:/Users/Junhao/Desktop/FishCapsule/app/api/study/step1/route.ts)
+- **Batch Processing**: Change input to accept `pages: []` and `pageTexts: {}`.
+- **Logic**: 
+    - Check cache for each page.
+    - Identify missing pages.
+    - Call Gemini with ALL missing pages in one prompt (or batched prompts if token limit concerns, but "1 request per selection" implies one prompt).
+    - Return combined results: `[{ page, plain, example, takeaway }]`.
+- **Caching**: Implement simple in-memory or file-based caching (or keep existing if present). *Note: PRD asks for local storage caching, which implies Client-side or Server-side. Prd says "Cache Step1 output in local storage (sessionId + lectureId + pageNumber + textHash)". This usually means Browser LocalStorage, but prompt says "Cache Step1 output in local storage... If user re-runs... do not call". I will implement Server-side caching for reliability if possible, or support the UI sending cached data.* 
+    - *Correction*: "Cache Step1 output in local storage" likely means the Browser's `localStorage` or `IndexedDB`. The UI should check this before sending the request. I will implement the UI logic to filter out already-cached pages.
 
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
+#### [MODIFY] [app/api/study/step2/route.ts](file:///c:/Users/Junhao/Desktop/FishCapsule/app/api/study/step2/route.ts)
+- Update to use Model Router.
 
-    console.log(`Processing file: ${file.name}, size: ${file.size}`);
+#### [MODIFY] [app/api/study/step3/route.ts](file:///c:/Users/Junhao/Desktop/FishCapsule/app/api/study/step3/route.ts)
+- Update to use Model Router.
 
-    // Convert File to Buffer (Crucial Step)
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+#### [MODIFY] [app/api/study/step4/route.ts](file:///c:/Users/Junhao/Desktop/FishCapsule/app/api/study/step4/route.ts)
+- Update to use Model Router.
 
-    // Parse PDF
-    const data = await pdf(buffer);
+### UI / Frontend
 
-    return NextResponse.json({
-      success: true,
-      text: data.text,
-      info: data.info,
-      pages: data.numpages
-    });
-  } catch (error: any) {
-    console.error("PDF Parse Error:", error);
-    return NextResponse.json(
-      { error: "Failed to parse PDF", details: error.message },
-      { status: 500 }
-    );
-  }
-}
-Step 2.2: Frontend Integration
-File: app/ingestion/page.tsx Action:
+#### [MODIFY] [StudyNotebookPanel.tsx](file:///c:/Users/Junhao/Desktop/FishCapsule/components/study/StudyNotebookPanel.tsx)
+- **Step 1 Logic**:
+    - Update `startStep1` to check `localStorage` first.
+    - Send ONLY missing pages to API (batch).
+    - Render skeleton cards immediately.
+    - Update state with results.
+- **Queue**: Use `lib/utils/queue` (or local equivalent) for Retries.
+- **Styles**:
+    - Increase `Takeaway` text contrast (light text on dark card).
+    - "I'm confused" button: visible without hover, subtle glow, bottom-right fixed.
+    - Typography: Increase base font size, use `Inter` or system-ui.
 
-State: Add const [parsedText, setParsedText] = useState("");
+## Verification Plan
 
-Upload Handler: Update the handleUpload function to:
+### Automated Tests
+- Create a test script `scripts/test-model-router.ts` to simulate 429 errors and verify fallback switching.
 
-POST the file to /api/parse.
-
-If response.ok, set parsedText.
-
-If parsedText exists, hide the Upload Dropzone and show a Preview Card.
-
-Preview Card UI:
-
-Glassmorphism container.
-
-Title: "Knowledge Extracted".
-
-Content: A scrollable text area showing the first 1000 characters of parsedText.
-
-Button: "Generate Concepts" (leads to Phase 3).
-
-🧠 Phase 3: The Knowledge Engine
-Goal: Send the parsed text to Gemini AI to generate structured Cornell Notes.
-
-Step 3.1: Setup Gemini AI
-Install: npm install @google/generative-ai
-
-Env: Ensure GOOGLE_API_KEY is set in .env.local.
-
-Utility: Create lib/gemini.ts to initialize the model (gemini-1.5-pro).
-
-Step 3.2: Concept Extraction API
-File: app/api/generate/route.ts Action:
-
-Accept text (string) from the request body.
-
-Prompt Engineering:
-
-"Analyze the following learning material. Extract key concepts. For each concept, provide: 1. A definition, 2. A specific quote from the text as evidence, 3. Exam probability (High/Med/Low). Return as JSON array."
-
-Return the JSON structure.
-
-⚔️ Phase 4: The Practice Ladder
-Goal: Interactive study loop.
-
-Step 4.1: Component Architecture
-Create components/study/ConceptCard.tsx (The Cornell Card).
-
-Create components/study/QuizInterface.tsx (The Practice/Micro Drill).
-
-Step 4.2: Practice Logic
-Quick Check: Simple Flip-card or Multiple Choice.
-
-Micro Drill: A text input area where user types an answer.
-
-AI Judge: Send user answer + Original Concept to Gemini to judge correctness.
+### Manual Verification
+1. **Step 1 Batching**: Select 3 pages -> Check Network tab (1 request) -> Verify 3 cards appear.
+2. **Caching**: Refresh page -> Select same 3 pages -> Check Network tab (0 requests or instant return).
+3. **Router Fallback**: Temporarily force a specific model to fail (mock) and verify switch to fallback.
+4. **UI**: Check "Takeaway" readability and "I'm confused" visibility.

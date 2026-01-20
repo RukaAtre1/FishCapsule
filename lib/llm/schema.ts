@@ -39,15 +39,16 @@ export const SlideExplainSchema = z.object({
     deckId: z.string().optional(),
     pages: z.union([
         z.array(z.number().int().min(1)),
+        z.number().int().min(1),
         z.object({ start: z.number().int().min(1), end: z.number().int().min(1) }),
     ]),
     titleGuess: z.string().max(200).optional(),
-    keyPoints: z.array(z.string().min(5)).min(1).max(10),
-    whyItMatters: z.array(z.string().min(5)).min(1).max(5),
-    examAngles: z.array(z.string().min(5)).min(1).max(5),
-    commonMistakes: z.array(z.string().min(5)).min(1).max(5),
+    keyPoints: z.array(z.string().min(2)).min(1).max(10),
+    whyItMatters: z.array(z.string().min(2)).min(0).max(5).optional().default([]),
+    examAngles: z.array(z.string().min(2)).min(0).max(5).optional().default([]),
+    commonMistakes: z.array(z.string().min(2)).min(0).max(5).optional().default([]),
     quickCheck: SlideExplainQuickCheckSchema,
-    citations: z.array(CitationSchema).min(1).max(20),
+    citations: z.array(CitationSchema).min(0).max(20).optional().default([]),
 });
 
 export const SlideExplainResponseSchema = z.object({
@@ -193,14 +194,109 @@ export const BarrierAssessmentSchema = z.object({
     })).min(0).max(5),
 });
 
-// ============ Output Metadata ============
+// ============ Output Metadata (PRD v2.0) ============
 
+export const ApiMetaSchema = z.object({
+    totalMs: z.number(),
+    stages: z.object({
+        extract: z.number().optional(),
+        llm: z.number().optional(),
+        parse: z.number().optional(),
+    }),
+    input: z.object({
+        chars: z.number(),
+        estTokens: z.number(),
+    }).optional(),
+    llm: z.object({
+        provider: z.string(),
+        model: z.string(),
+        attempts: z.number(),
+        timeoutMs: z.number(),
+    }).optional(),
+    cache: z.object({
+        hit: z.boolean(),
+        key: z.string().optional(),
+    }).optional(),
+});
+
+// Legacy meta for backward compatibility
 export const OutputMetaSchema = z.object({
-    source: z.enum(["llm", "repaired", "fallback"]),
+    source: z.enum(["llm", "cache", "fallback"]),
     latencyMs: z.number().optional(),
+    failStage: z.enum(["timeout", "parse", "schema", "repair"]).optional(),
     validationErrors: z.array(z.string()).optional(),
-    generationId: z.string().optional(),
-    cacheHit: z.boolean().optional(),
+    promptVersion: z.string().optional(),
+});
+
+// ============ PRD v2.0 Step Schemas ============
+
+// Step 1: Per-page Explain (short output)
+export const Step1ExplainSchema = z.object({
+    page: z.number().int().min(1),
+    plain: z.string().max(600),    // <=120 words
+    example: z.string().max(600),  // <=120 words  
+    takeaway: z.string().max(150), // <=20 words
+});
+
+export const Step1ResponseSchema = z.object({
+    result: Step1ExplainSchema,
+    meta: ApiMetaSchema,
+});
+
+// Step 2: Synthesize (cross-page summary)
+export const Step2SynthesizeSchema = z.object({
+    keyIdeas: z.array(z.string().max(300)).min(1).max(3),
+    commonConfusion: z.string().max(300),
+    examAngle: z.string().max(300),
+});
+
+export const Step2ResponseSchema = z.object({
+    result: Step2SynthesizeSchema,
+    meta: ApiMetaSchema,
+});
+
+// Step 3: Quiz with Barrier Tags
+export const BarrierTagSchema = z.enum([
+    "Concept",
+    "Mechanics",
+    "Transfer",
+    "Communication",
+]);
+
+export const QuizQuestionSchema = z.object({
+    id: z.string().min(1),
+    type: z.enum(["mcq", "short"]),
+    prompt: z.string().min(10),
+    choices: z.array(z.string()).optional(),
+    answer: z.string().min(1),
+    why: z.string().max(150), // <=30 words
+    tag: BarrierTagSchema,
+});
+
+export const Step3QuizSchema = z.object({
+    questions: z.array(QuizQuestionSchema).min(3).max(5),
+});
+
+export const Step3ResponseSchema = z.object({
+    result: Step3QuizSchema,
+    meta: ApiMetaSchema,
+});
+
+// Step 4: Diagnose + Plan
+export const ReviewPlanItemSchema = z.object({
+    in: z.enum(["1d", "3d", "7d"]),
+});
+
+export const Step4DiagnoseSchema = z.object({
+    overallTag: BarrierTagSchema,
+    evidence: z.array(z.string()).min(1).max(5),
+    microPlan: z.array(z.string()).min(1).max(3), // 10-min tasks
+    reviewPlan: z.array(ReviewPlanItemSchema).min(1).max(3),
+});
+
+export const Step4ResponseSchema = z.object({
+    result: Step4DiagnoseSchema,
+    meta: ApiMetaSchema,
 });
 
 // ============ Type Exports ============
@@ -209,5 +305,13 @@ export type CornellCardOutput = z.infer<typeof CornellCardSchema>;
 export type FeedbackOutput = z.infer<typeof FeedbackResponseSchema>;
 export type DiagnoseOutput = z.infer<typeof BarrierAssessmentSchema>;
 export type OutputMeta = z.infer<typeof OutputMetaSchema>;
+export type ApiMeta = z.infer<typeof ApiMetaSchema>;
 export type LectureNode = z.infer<typeof LectureNodeSchema>;
 export type OutlineResponse = z.infer<typeof OutlineResponseSchema>;
+export type Step1Explain = z.infer<typeof Step1ExplainSchema>;
+export type Step2Synthesize = z.infer<typeof Step2SynthesizeSchema>;
+export type Step3Quiz = z.infer<typeof Step3QuizSchema>;
+export type QuizQuestion = z.infer<typeof QuizQuestionSchema>;
+export type Step4Diagnose = z.infer<typeof Step4DiagnoseSchema>;
+export type BarrierTag = z.infer<typeof BarrierTagSchema>;
+

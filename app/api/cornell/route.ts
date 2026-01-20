@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { CornellCard, QuickCheckQuestion } from "@/types/learning";
-import { callGLM } from "@/lib/llm/glm";
+import { generateGeminiResponse } from "@/lib/llm/gemini";
 import { cornellMessages } from "@/lib/llm/prompts";
 import { keywordFrequency, pickPrimarySnippet, slugify } from "@/lib/learning/extract";
+import crypto from "crypto";
 
 function ensureQuickChecks(card: CornellCard, fallback: CornellCard) {
   const hasMcq = card.quickCheck.some((q) => q.type === "mcq");
@@ -132,52 +133,61 @@ export async function POST(req: Request) {
 
     const fallbackCard = buildFallbackCard(conceptId, conceptTitle, context);
 
-    if (process.env.ZAI_API_KEY) {
-      try {
-        const messages = cornellMessages(conceptId, conceptTitle, context);
-        const llm = await callGLM(messages, undefined, { timeoutMs: force ? 30000 : 15000 });
-        if (llm.ok && llm.value?.card) {
-          const raw = llm.value.card;
-          const card: CornellCard = {
-            conceptId,
-            conceptTitle,
-            cues: raw.cues ?? [],
-            notes: raw.notes ?? [],
-            summary: raw.summary ?? "",
-            misconceptions: raw.misconceptions ?? [],
-            quickCheck: raw.quickCheck ?? []
-          };
+    // Use Gemini if Key is present
+    try {
+      const messages = cornellMessages(conceptId, conceptTitle, context);
 
-          const quickCheck = ensureQuickChecks(card, fallbackCard);
-          const completedCard: CornellCard = {
-            conceptId,
-            conceptTitle,
-            cues: card.cues.length ? card.cues : fallbackCard.cues,
-            notes: card.notes.length ? card.notes : fallbackCard.notes,
-            summary: card.summary || fallbackCard.summary,
-            misconceptions: card.misconceptions.length
-              ? card.misconceptions
-              : fallbackCard.misconceptions,
-            quickCheck
-          };
+      // Map to Gemini format
+      const geminiContents = messages.slice(1).map(m => ({
+        role: m.role === "user" ? "user" as const : "model" as const,
+        parts: [{ text: m.content }]
+      }));
 
-          return NextResponse.json({
-            ok: true,
-            data: {
-              card: completedCard,
-              meta: {
-                source: "llm" as const,
-                generationId:
-                  typeof crypto !== "undefined" && "randomUUID" in crypto
-                    ? crypto.randomUUID()
-                    : `gen-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
-              }
+      const result = await generateGeminiResponse({
+        systemInstruction: messages[0].content,
+        contents: geminiContents,
+        jsonMode: true,
+        timeoutMs: force ? 30000 : 20000,
+      });
+
+      if (result.ok && result.value?.card) {
+        const raw = result.value.card;
+        const card: CornellCard = {
+          conceptId,
+          conceptTitle,
+          cues: raw.cues ?? [],
+          notes: raw.notes ?? [],
+          summary: raw.summary ?? "",
+          misconceptions: raw.misconceptions ?? [],
+          quickCheck: raw.quickCheck ?? []
+        };
+
+        const quickCheck = ensureQuickChecks(card, fallbackCard);
+        const completedCard: CornellCard = {
+          conceptId,
+          conceptTitle,
+          cues: card.cues.length ? card.cues : fallbackCard.cues,
+          notes: card.notes.length ? card.notes : fallbackCard.notes,
+          summary: card.summary || fallbackCard.summary,
+          misconceptions: card.misconceptions.length
+            ? card.misconceptions
+            : fallbackCard.misconceptions,
+          quickCheck
+        };
+
+        return NextResponse.json({
+          ok: true,
+          data: {
+            card: completedCard,
+            meta: {
+              source: "gemini" as const,
+              generationId: crypto.randomUUID()
             }
-          });
-        }
-      } catch (err) {
-        console.error("Cornell LLM fallback:", (err as Error).message);
+          }
+        });
       }
+    } catch (err) {
+      console.error("Cornell Gemini fallback:", (err as Error).message);
     }
 
     return NextResponse.json({
@@ -186,11 +196,8 @@ export async function POST(req: Request) {
         card: fallbackCard,
         meta: {
           source: "fallback" as const,
-          reason: "LLM unavailable or failed",
-          generationId:
-            typeof crypto !== "undefined" && "randomUUID" in crypto
-              ? crypto.randomUUID()
-              : `gen-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
+          reason: "Gemini unavailable or failed",
+          generationId: crypto.randomUUID()
         }
       }
     });

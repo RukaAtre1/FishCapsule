@@ -1,36 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { callGLM } from "@/lib/llm/glm";
+import { generateGeminiResponse } from "@/lib/llm/gemini";
 import { OutlineResponseSchema } from "@/lib/llm/schema";
-import { z } from "zod";
 
-export const maxDuration = 120; // Allow 120s for slow LLM responses
+export const maxDuration = 45;
 
-const SYSTEM_PROMPT = `You are a curriculum expert.
-Your goal is to parse raw syllabus text into a structured JSON course outline.
-Return JSON ONLY. No markdown formatting. No preamble.
+const SYSTEM_PROMPT = `You are a curriculum expert. Parse the syllabus into a structured JSON course outline.
+Return VALID JSON.
 
 Structure:
 {
   "outline": [
     {
       "lectureId": "lec-1",
-      "week": "Week 1",
-      "date": "2024-01-01",
-      "title": "Introduction...",
-      "topics": ["Topic A", "Topic B"],
-      "deliverables": ["HW1"],
-      "readings": ["Ch 1"]
+      "week": "Topic/Week",
+      "title": "Main Topic",
+      "topics": ["Subtopic A", "Subtopic B"],
+      "readings": ["Ch 1"],
+      "deliverables": []
     }
   ]
 }
 
-- Group by lecture.
-- Generate stable IDs (lec-1, lec-2...).
-- Extract dates if present.
-- Limit to major lectures.
+RULES:
+1. Extract 5-15 major lecture items.
+2. Group related topics logically.
+3. If no week/date is found, use 'Lec X'.
 `;
-
-// ... imports
 
 export async function POST(req: NextRequest) {
     const start = Date.now();
@@ -42,40 +37,39 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing syllabus text" }, { status: 400 });
         }
 
-        const messages = [
-            { role: "system" as const, content: SYSTEM_PROMPT },
-            {
-                role: "user" as const,
-                content: `Course Title: ${courseTitle || "Unknown"}\n\nSyllabus:\n${syllabusText}`,
-            },
-        ];
+        console.log(`[Outline] Generating with Gemini for: ${courseTitle}`);
 
-        const result = await callGLM(messages, "glm-4.5-flash", { timeoutMs: 90000 });
+        const result = await generateGeminiResponse({
+            systemInstruction: SYSTEM_PROMPT,
+            contents: [
+                { role: "user", parts: [{ text: `Course: ${courseTitle}\nSyllabus:\n${syllabusText}` }] }
+            ],
+            jsonMode: true,
+            timeoutMs: 35000,
+        });
 
         if (!result.ok) {
-            console.error("GLM Error:", result.error);
             return NextResponse.json({
                 error: result.error.message,
                 meta: {
-                    source: "fallback",
-                    latencyMs: Date.now() - start,
-                    failStage: "timeout" // or network_error, simplified
+                    totalMs: Date.now() - start,
+                    attempts: result.meta.attempts,
+                    timeout: result.meta.timeout,
                 }
             }, { status: 500 });
         }
 
-        const parsed = OutlineResponseSchema.safeParse(result.value);
+        const data = result.value;
+        const parsed = OutlineResponseSchema.safeParse(data);
 
         if (!parsed.success) {
-            console.error("Validation Error:", parsed.error);
+            console.error("Gemini Validation Error:", parsed.error.issues);
             return NextResponse.json({
                 error: "Schema validation failed",
                 details: parsed.error.issues,
                 meta: {
-                    source: "fallback",
-                    latencyMs: Date.now() - start,
-                    failStage: "schema",
-                    validationErrors: parsed.error.issues.map(i => i.message)
+                    totalMs: Date.now() - start,
+                    attempts: result.meta.attempts,
                 }
             }, { status: 422 });
         }
@@ -83,8 +77,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             outline: parsed.data.outline,
             meta: {
-                source: "llm",
-                latencyMs: Date.now() - start,
+                source: "gemini",
+                model: result.meta.model,
+                totalMs: Date.now() - start,
+                attempts: result.meta.attempts,
             }
         });
 
@@ -92,11 +88,7 @@ export async function POST(req: NextRequest) {
         console.error("API Error:", error);
         return NextResponse.json({
             error: error.message,
-            meta: {
-                source: "fallback",
-                latencyMs: Date.now() - start,
-                failStage: "parse"
-            }
+            meta: { totalMs: Date.now() - start }
         }, { status: 500 });
     }
 }

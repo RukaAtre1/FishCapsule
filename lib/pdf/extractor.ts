@@ -25,7 +25,10 @@ export async function extractTextFromPages(
     // Clone the ArrayBuffer to avoid detachment issues
     const clonedData = pdfData.slice(0);
 
-    const pdf = await pdfjsLib.getDocument({ data: clonedData }).promise;
+    const pdf = await pdfjsLib.getDocument({
+        data: clonedData,
+        standardFontDataUrl: "https://unpkg.com/pdfjs-dist@4.8.69/standard_fonts/",
+    }).promise;
     const results: PageText[] = [];
 
     for (const pageNum of pageNumbers) {
@@ -92,7 +95,10 @@ function checkNeedsOCR(text: string): boolean {
  */
 export async function getPdfPageCount(pdfData: ArrayBuffer): Promise<number> {
     const clonedData = pdfData.slice(0);
-    const pdf = await pdfjsLib.getDocument({ data: clonedData }).promise;
+    const pdf = await pdfjsLib.getDocument({
+        data: clonedData,
+        standardFontDataUrl: "https://unpkg.com/pdfjs-dist@4.8.69/standard_fonts/",
+    }).promise;
     return pdf.numPages;
 }
 
@@ -105,7 +111,10 @@ export async function renderPageToCanvas(
     scale: number = 2.0
 ): Promise<HTMLCanvasElement> {
     const clonedData = pdfData.slice(0);
-    const pdf = await pdfjsLib.getDocument({ data: clonedData }).promise;
+    const pdf = await pdfjsLib.getDocument({
+        data: clonedData,
+        standardFontDataUrl: "https://unpkg.com/pdfjs-dist@4.8.69/standard_fonts/",
+    }).promise;
     const page = await pdf.getPage(pageNumber);
 
     const viewport = page.getViewport({ scale });
