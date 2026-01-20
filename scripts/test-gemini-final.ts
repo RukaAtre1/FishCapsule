@@ -23,6 +23,7 @@ async function main() {
     console.log("Model: gemini-2.5-flash-lite");
 
     const result = await generateGeminiResponse({
+        task: "step1_explain",
         contents: [
             { role: "user", parts: [{ text: "Hello! If you can see this, reply with 'Gemini 2.5 Online' and a 1-sentence interesting fact about space." }] }
         ],

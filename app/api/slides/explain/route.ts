@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
         const slideContent = chunks.map(c => `[Page ${c.page}, ID: ${c.chunkId}]\n${c.text}`).join("\n\n---\n\n");
 
         const result = await generateGeminiResponse({
+            task: "slides_explain_batch",
             systemInstruction: SYSTEM_PROMPT,
             contents: [
                 { role: "user", parts: [{ text: `Lecture ID: ${lectureId}\nPages: ${JSON.stringify(pages)}\nMode: ${mode}\n\nContent:\n${slideContent}` }] }

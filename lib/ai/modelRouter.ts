@@ -4,6 +4,11 @@ export type AiTask =
     | "step2_synthesize"
     | "step3_quiz"
     | "step4_diagnose"
+    | "concepts"
+    | "outline"
+    | "slides_explain_batch"
+    | "feedback"
+    | "cornell"
     | "embedding";
 
 interface ModelConfig {
@@ -12,24 +17,42 @@ interface ModelConfig {
 }
 
 // Default Model Configuration
-// Using strings as requested in PRD v2.0
-// Note: In a real scenario, ensure these models exist or are aliased in the SDK.
 const MODEL_CONFIG: Record<AiTask, ModelConfig> = {
     "step1_explain": {
-        primary: "gemini-2.5-flash-lite", // As requested. Fallback to 2.0 if this is future-dated.
-        fallbacks: ["gemini-2.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"]
+        primary: "gemini-2.0-flash-lite-preview-02-05",
+        fallbacks: ["gemini-2.0-flash", "gemini-1.5-flash"]
     },
     "step2_synthesize": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-2.0-flash", "gemini-1.5-flash"]
+        primary: "gemini-2.0-flash",
+        fallbacks: ["gemini-1.5-flash"]
     },
     "step3_quiz": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-2.0-flash", "gemini-1.5-flash"]
+        primary: "gemini-2.0-flash",
+        fallbacks: ["gemini-1.5-flash"]
     },
     "step4_diagnose": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-2.0-flash", "gemini-1.5-flash"]
+        primary: "gemini-2.0-flash",
+        fallbacks: ["gemini-1.5-flash"]
+    },
+    "concepts": {
+        primary: "gemini-2.0-flash",
+        fallbacks: ["gemini-1.5-flash"]
+    },
+    "outline": {
+        primary: "gemini-2.0-flash",
+        fallbacks: ["gemini-1.5-flash"]
+    },
+    "slides_explain_batch": {
+        primary: "gemini-2.0-flash",
+        fallbacks: ["gemini-1.5-flash"]
+    },
+    "feedback": {
+        primary: "gemini-2.0-flash",
+        fallbacks: ["gemini-1.5-flash"]
+    },
+    "cornell": {
+        primary: "gemini-2.0-flash",
+        fallbacks: ["gemini-1.5-flash"]
     },
     "embedding": {
         primary: "text-embedding-004",

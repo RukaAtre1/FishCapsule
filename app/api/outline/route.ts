@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
         console.log(`[Outline] Generating with Gemini for: ${courseTitle}`);
 
         const result = await generateGeminiResponse({
+            task: "outline",
             systemInstruction: SYSTEM_PROMPT,
             contents: [
                 { role: "user", parts: [{ text: `Course: ${courseTitle}\nSyllabus:\n${syllabusText}` }] }

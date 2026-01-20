@@ -144,6 +144,7 @@ export async function POST(req: Request) {
       }));
 
       const result = await generateGeminiResponse({
+        task: "cornell",
         systemInstruction: messages[0].content,
         contents: geminiContents,
         jsonMode: true,

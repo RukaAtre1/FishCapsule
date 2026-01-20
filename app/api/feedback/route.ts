@@ -92,6 +92,7 @@ export async function POST(req: Request) {
       }\nConcept notes: ${conceptNotes || "not provided"}\nRecent accuracy: ${accuracy}%\nRecent attempts:\n${summaryAttempts}\nIdentify the main barrier id and a brief evidence sentence.`;
 
     const result = await generateGeminiResponse<ModelDiagnosis>({
+      task: "feedback",
       systemInstruction,
       contents: [{ role: "user", parts: [{ text: userContent }] }],
       jsonMode: true,

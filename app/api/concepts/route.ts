@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       }));
 
       const result = await generateGeminiResponse({
+        task: "concepts",
         systemInstruction: messages[0].content,
         contents: geminiContents,
         jsonMode: true,
