@@ -150,25 +150,26 @@ export async function generateGeminiResponse<T = any>(
             clearTimeout(timeout);
             lastError = err;
             const isTimeout = err.name === "AbortError";
-            const isRetryable = isTimeout || (err.status >= 500) || err.status === 429 || err.message?.includes("overloaded");
+            const isQuotaExceeded = err.status === 429 || err.message?.includes("quota") || err.message?.includes("rate limit");
+            const isModelNotFound = err.status === 404 || err.message?.includes("not found") || err.message?.includes("not supported");
+
+            const isRetryable = isTimeout || (err.status >= 500) || isQuotaExceeded || err.message?.includes("overloaded");
 
             console.warn(`Gemini Attempt ${attempts}/${maxAttempts} failed:`, err.message);
 
-            if (!isRetryable || attempts >= maxAttempts) {
-                break;
+            if (isModelNotFound) {
+                console.warn(`[Gemini] Model ${currentModel} not found or unsupported. Rotating...`);
+                // No delay needed for 404 as it's a configuration/existence issue
+                continue;
             }
 
-            if (!ModelRouter.isRetryableError(err) && attempts < maxAttempts) {
-                // Even if not strictly retryable, if it's a "models not found" or weird error, maybe switching models helps?
-                // But strictly, we check isRetryable.
-                // Actually, if we haven't exhausted all models, we might want to try the next model even on 404/400?
-                // No, 400 is bad request. 404 is model not found. 
-                if (err.message.includes("not found") || err.status === 404) {
-                    // Try next model immediately
-                    console.warn(`[Gemini] Model ${currentModel} not found, skipping...`);
-                    continue;
-                }
-                if (!ModelRouter.isRetryableError(err)) break;
+            if (isQuotaExceeded) {
+                console.warn(`[Gemini] Quota exceeded for ${currentModel}. Rotating to fallback if available...`);
+                // We proceed to retry/rotate
+            }
+
+            if (!isRetryable || attempts >= maxAttempts) {
+                break;
             }
 
             // Calculate backoff

@@ -19,40 +19,40 @@ interface ModelConfig {
 // Default Model Configuration
 const MODEL_CONFIG: Record<AiTask, ModelConfig> = {
     "step1_explain": {
-        primary: "gemini-2.0-flash-lite-preview-02-05",
-        fallbacks: ["gemini-2.0-flash", "gemini-1.5-flash"]
+        primary: "gemini-2.5-flash-lite",
+        fallbacks: ["gemini-2.5-flash", "gemini-3-flash"]
     },
     "step2_synthesize": {
-        primary: "gemini-2.0-flash",
-        fallbacks: ["gemini-1.5-flash"]
+        primary: "gemini-2.5-flash",
+        fallbacks: ["gemini-2.5-flash-lite", "gemini-3-flash"]
     },
     "step3_quiz": {
-        primary: "gemini-2.0-flash",
-        fallbacks: ["gemini-1.5-flash"]
+        primary: "gemini-2.5-flash",
+        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
     },
     "step4_diagnose": {
-        primary: "gemini-2.0-flash",
-        fallbacks: ["gemini-1.5-flash"]
+        primary: "gemini-2.5-flash",
+        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
     },
     "concepts": {
-        primary: "gemini-2.0-flash",
-        fallbacks: ["gemini-1.5-flash"]
+        primary: "gemini-2.5-flash",
+        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
     },
     "outline": {
-        primary: "gemini-2.0-flash",
-        fallbacks: ["gemini-1.5-flash"]
+        primary: "gemini-2.5-flash",
+        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
     },
     "slides_explain_batch": {
-        primary: "gemini-2.0-flash",
-        fallbacks: ["gemini-1.5-flash"]
+        primary: "gemini-2.5-flash",
+        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
     },
     "feedback": {
-        primary: "gemini-2.0-flash",
-        fallbacks: ["gemini-1.5-flash"]
+        primary: "gemini-2.5-flash",
+        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
     },
     "cornell": {
-        primary: "gemini-2.0-flash",
-        fallbacks: ["gemini-1.5-flash"]
+        primary: "gemini-2.5-flash",
+        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
     },
     "embedding": {
         primary: "text-embedding-004",
