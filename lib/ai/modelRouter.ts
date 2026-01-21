@@ -9,6 +9,8 @@ export type AiTask =
     | "slides_explain_batch"
     | "feedback"
     | "cornell"
+    | "practice_cloze"
+    | "batch_generation"
     | "embedding";
 
 interface ModelConfig {
@@ -51,6 +53,14 @@ const MODEL_CONFIG: Record<AiTask, ModelConfig> = {
         fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
     },
     "cornell": {
+        primary: "gemini-2.5-flash",
+        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+    },
+    "practice_cloze": {
+        primary: "gemini-2.5-flash",
+        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+    },
+    "batch_generation": {
         primary: "gemini-2.5-flash",
         fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
     },

@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
             responseSchema: {
                 type: "object",
                 properties: {
-                    keyIdeas: { type: "array", items: { type: "string" } },
+                    keyIdeas: { type: "array", items: { type: "string" }, maxItems: 5 },
                     commonConfusion: { type: "string" },
                     examAngle: { type: "string" }
                 },

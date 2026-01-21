@@ -5,7 +5,8 @@
 @layer base {
   :root {
     /* Base - Off-black somewhat inspired by Linear/Arc */
-    --background: 223 24% 6%;
+    --background: 222 18% 10%;
+    /* #12141C - Charcoal Blackboard */
     /* #0B0D12 */
     --foreground: 222 16% 86%;
     /* #D6D9E0 */
@@ -58,7 +59,7 @@
   }
 
   .dark {
-    --background: 223 24% 6%;
+    --background: 222 18% 10%;
     --foreground: 222 16% 86%;
     --card: 227 19% 9%;
     --card-foreground: 222 16% 86%;

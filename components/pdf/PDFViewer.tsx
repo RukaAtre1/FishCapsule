@@ -291,25 +291,25 @@ export default function PDFViewer({ onRangeSelect, onPdfLoaded, maxRangeSize = 5
             {/* Toolbar */}
             <div className="flex items-center justify-between p-3 border-b bg-background/50 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 bg-muted/50 rounded-md p-1">
+                    <div className="flex items-center gap-1 bg-white/5 rounded-md p-1 border border-white/10">
                         <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="icon"
                             disabled={pageNum <= 1}
                             onClick={() => setPageNum(p => p - 1)}
-                            className="h-8 w-8"
+                            className="h-7 w-7 bg-white/10 hover:bg-white/20"
                         >
                             <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        <span className="text-sm font-mono px-2 min-w-[60px] text-center">
+                        <span className="text-xs font-mono px-3 min-w-[70px] text-center text-slate-300">
                             {pageNum} / {numPages}
                         </span>
                         <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="icon"
                             disabled={pageNum >= numPages}
                             onClick={() => setPageNum(p => p + 1)}
-                            className="h-8 w-8"
+                            className="h-7 w-7 bg-white/10 hover:bg-white/20"
                         >
                             <ChevronRight className="w-4 h-4" />
                         </Button>

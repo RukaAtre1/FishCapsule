@@ -138,7 +138,7 @@ function LectureWorkspace() {
             {/* Main Workspace */}
             <div className="flex-grow flex overflow-hidden">
                 {/* Left: PDF Viewer */}
-                <div className="flex-1 border-r overflow-hidden">
+                <div className="flex-[0.38] border-r overflow-hidden">
                     <div className="h-full flex flex-col">
                         <div className="flex-shrink-0 px-6 py-3 bg-muted/10 border-b">
                             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -156,7 +156,7 @@ function LectureWorkspace() {
                 </div>
 
                 {/* Right: Step Flow Panel */}
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-[0.62] overflow-hidden">
                     <div className="h-full flex flex-col">
                         <div className="flex-shrink-0 px-6 py-3 bg-muted/10 border-b">
                             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

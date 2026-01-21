@@ -245,7 +245,7 @@ export const Step1ResponseSchema = z.object({
 
 // Step 2: Synthesize (cross-page summary)
 export const Step2SynthesizeSchema = z.object({
-    keyIdeas: z.array(z.string().max(300)).min(1).max(3),
+    keyIdeas: z.array(z.string().max(300)).min(1).max(5),
     commonConfusion: z.string().max(300),
     examAngle: z.string().max(300),
 });
@@ -299,6 +299,23 @@ export const Step4ResponseSchema = z.object({
     meta: ApiMetaSchema,
 });
 
+// ============ PRD v2.2: Cloze Practice ============
+
+// Cloze Question (Type C)
+export const ClozeQuestionSchema = z.object({
+    id: z.string().min(1),
+    sentence: z.string().min(10),  // contains ____ blank marker
+    choices: z.tuple([z.string(), z.string(), z.string(), z.string()]),
+    answerIndex: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+    explanation: z.string().max(200),
+    sourcePages: z.array(z.number().int()),
+    tag: BarrierTagSchema.optional(),
+});
+
+export const ClozeResponseSchema = z.object({
+    questions: z.array(ClozeQuestionSchema).min(3).max(3),
+});
+
 // ============ Type Exports ============
 
 export type CornellCardOutput = z.infer<typeof CornellCardSchema>;
@@ -314,4 +331,6 @@ export type Step3Quiz = z.infer<typeof Step3QuizSchema>;
 export type QuizQuestion = z.infer<typeof QuizQuestionSchema>;
 export type Step4Diagnose = z.infer<typeof Step4DiagnoseSchema>;
 export type BarrierTag = z.infer<typeof BarrierTagSchema>;
+export type ClozeQuestion = z.infer<typeof ClozeQuestionSchema>;
+export type ClozeResponse = z.infer<typeof ClozeResponseSchema>;
 
