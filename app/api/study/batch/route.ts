@@ -1,53 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateGeminiResponse } from "@/lib/llm/gemini";
-import { Step1ExplainSchema, Step2SynthesizeSchema, Step3QuizSchema } from "@/lib/llm/schema";
+import { Step1ExplainSchema, Step2SynthesizeSchema, Step3QuizSchema, Step1Explain } from "@/lib/llm/schema";
 import { z } from "zod";
 
 export const maxDuration = 60;
 
-const SYSTEM_PROMPT = `You are an elite study assistant. Your goal is to conduct a multi-step analysis of the provided study materials.
+// PRD v2.3: Updated system prompt for study-efficient output
+const SYSTEM_PROMPT = `You are an elite study assistant creating Cornell-style notes optimized for active recall and exam preparation.
 
-STEP 1: PER-PAGE EXPLANATION
-For each provided page, create a short, conversational explanation. Use simple language and RELATABLE real-world examples.
+## OUTPUT REQUIREMENTS (PRD v2.3)
 
-STEP 2: SYNTHESIS
-Identify the core 3-5 "Key Ideas" across all pages. Pinpoint a "Common Confusion" (what students miss) and an "Exam Angle" (how this will be tested).
+### STEP 1: PER-PAGE NOTES (structured format)
+For each page, generate:
+- "core": 1 sentence capturing the central idea
+- "mechanism": 2-3 bullet points explaining HOW it works
+- "examTraps": 1-2 bullet points on common mistakes/exam pitfalls
+- "example": (optional) 1 short concrete example
+- "takeaway": A memorable phrase (≤14 words)
+- "evidence": { "page": number, "snippet": "≤120 char excerpt from source" }
 
-STEP 3: QUIZ
-Generate 3-5 high-quality quiz questions (MCQ) that test the concepts identified in Step 2. 
-Each question must have exactly 4 choices and a clear "why" (explanation).
-Tags: Concept, Mechanics, Transfer, Communication.
+### STEP 2: CUES (Q/A Recall Format)
+Generate 4-6 retrieval cues. Each cue MUST be:
+- "q": A question ending with "?" (forces active recall)
+- "a": Short answer (≤8 words preferred)
+- "page": Source page number
+- "tag": One of "concept" | "mechanics" | "transfer" | "communication"
+
+Example good cue:
+{ "page": 3, "tag": "concept", "q": "What problem does bagging solve?", "a": "Reduces variance in unstable models" }
+
+### STEP 3: SUMMARY (Review Card Format)
+- "memorize": Exactly 3 bullets (core facts to remember)
+- "examQs": Exactly 2 likely exam questions
 
 OUTPUT FORMAT (STRICT JSON):
 {
   "step1": [
     {
       "page": number,
-      "plain": "Simple explanation",
-      "example": "Relatable example",
-      "takeaway": "One-sentence core concept"
+      "core": "1-sentence main idea",
+      "mechanism": ["How point 1", "How point 2"],
+      "examTraps": ["Watch out for..."],
+      "example": "Optional brief example",
+      "takeaway": "≤14 words memorable phrase",
+      "evidence": { "page": number, "snippet": "≤120 chars from source" }
     }
   ],
   "step2": {
+    "cues": [
+      { "page": 1, "tag": "concept", "q": "Question?", "a": "Short answer" }
+    ],
     "keyIdeas": ["Idea 1", "Idea 2", "Idea 3"],
-    "commonConfusion": "...",
-    "examAngle": "..."
+    "commonConfusion": "What students often mix up",
+    "examAngle": "How this appears on exams"
   },
   "step3": {
-    "questions": [
-      {
-        "id": "q1",
-        "type": "mcq",
-        "prompt": "...",
-        "choices": ["A", "B", "C", "D"],
-        "answer": "A",
-        "why": "...",
-        "tag": "Concept"
-      }
-    ]
+    "memorize": ["Fact 1", "Fact 2", "Fact 3"],
+    "examQs": ["Likely exam question 1?", "Likely exam question 2?"]
   }
 }
+
+CRITICAL RULES:
+- Cues must be QUESTIONS (end with ?)
+- No repetition between pages
+- Evidence snippets must be real excerpts (≤120 chars)
+- Summary is for quick review, not a repeat of notes
 `;
+
 
 const BatchRequestSchema = z.object({
     pages: z.array(z.number()),
@@ -90,49 +109,60 @@ Generate Step 1, 2, and 3 content based on the above.
             responseSchema: {
                 type: "object",
                 properties: {
+                    // Step 1: Per-page structured notes (PRD v2.3)
                     step1: {
                         type: "array",
                         items: {
                             type: "object",
                             properties: {
                                 page: { type: "number" },
-                                plain: { type: "string" },
+                                core: { type: "string" },
+                                mechanism: { type: "array", items: { type: "string" } },
+                                examTraps: { type: "array", items: { type: "string" } },
                                 example: { type: "string" },
-                                takeaway: { type: "string" }
+                                takeaway: { type: "string" },
+                                evidence: {
+                                    type: "object",
+                                    properties: {
+                                        page: { type: "number" },
+                                        snippet: { type: "string" }
+                                    }
+                                }
                             },
-                            required: ["page", "plain", "example", "takeaway"]
+                            required: ["page", "core", "mechanism", "examTraps", "takeaway"]
                         }
                     },
+                    // Step 2: Cues (Q/A format) + synthesis (PRD v2.3)
                     step2: {
                         type: "object",
                         properties: {
-                            keyIdeas: { type: "array", items: { type: "string" }, maxItems: 5 },
-                            commonConfusion: { type: "string" },
-                            examAngle: { type: "string" }
-                        },
-                        required: ["keyIdeas", "commonConfusion", "examAngle"]
-                    },
-                    step3: {
-                        type: "object",
-                        properties: {
-                            questions: {
+                            cues: {
                                 type: "array",
                                 items: {
                                     type: "object",
                                     properties: {
-                                        id: { type: "string" },
-                                        type: { type: "string", enum: ["mcq"] },
-                                        prompt: { type: "string" },
-                                        choices: { type: "array", items: { type: "string" } },
-                                        answer: { type: "string" },
-                                        why: { type: "string" },
-                                        tag: { type: "string", enum: ["Concept", "Mechanics", "Transfer", "Communication"] }
+                                        page: { type: "number" },
+                                        tag: { type: "string", enum: ["concept", "mechanics", "transfer", "communication"] },
+                                        q: { type: "string" },
+                                        a: { type: "string" }
                                     },
-                                    required: ["id", "type", "prompt", "choices", "answer", "why", "tag"]
+                                    required: ["page", "tag", "q", "a"]
                                 }
-                            }
+                            },
+                            keyIdeas: { type: "array", items: { type: "string" }, maxItems: 5 },
+                            commonConfusion: { type: "string" },
+                            examAngle: { type: "string" }
                         },
-                        required: ["questions"]
+                        required: ["cues", "keyIdeas", "commonConfusion", "examAngle"]
+                    },
+                    // Step 3: Summary card (PRD v2.3)
+                    step3: {
+                        type: "object",
+                        properties: {
+                            memorize: { type: "array", items: { type: "string" } },
+                            examQs: { type: "array", items: { type: "string" } }
+                        },
+                        required: ["memorize", "examQs"]
                     }
                 },
                 required: ["step1", "step2", "step3"]
@@ -145,75 +175,159 @@ Generate Step 1, 2, and 3 content based on the above.
         }
 
         const data = result.value;
+        const warnings: string[] = [];
 
-        // Step 1 validation
-        const validStep1 = z.array(Step1ExplainSchema).safeParse(data.step1);
-        if (!validStep1.success) {
-            return NextResponse.json({
-                error: "Step 1 validation failed",
-                details: validStep1.error.issues
-            }, { status: 422 });
-        }
+        // === Step 1 Validation & Normalization (PRD v2.3: Structured PageNote) ===
+        type PageNoteV2 = {
+            page: number;
+            core: string;
+            mechanism: string[];
+            examTraps: string[];
+            example?: string;
+            takeaway: string;
+            evidence?: { page: number; snippet: string };
+        };
 
-        // Step 2 validation
-        const validStep2 = Step2SynthesizeSchema.safeParse(data.step2);
-        if (!validStep2.success) {
-            return NextResponse.json({
-                error: "Step 2 validation failed",
-                details: validStep2.error.issues
-            }, { status: 422 });
-        }
-
-        // Step 3 normalization (graceful degradation)
-        let step3Data = null;
-        try {
-            const VALID_TAGS = ["Concept", "Mechanics", "Transfer", "Communication"] as const;
-            const normalizedQuestions = (data.step3?.questions || []).map((q: any, idx: number) => {
-                // Normalize tag
-                let normalizedTag = "Concept";
-                if (q.tag) {
-                    const foundTag = VALID_TAGS.find(t => t.toLowerCase() === q.tag.toLowerCase());
-                    if (foundTag) normalizedTag = foundTag;
-                }
-                // Normalize answer
-                let normalizedAnswer = (q.answer || "").toString().trim().charAt(0).toUpperCase();
-                // Truncate why
-                const why = (q.why || "").toString().substring(0, 150);
-                // Ensure choices array
-                const choices = Array.isArray(q.choices) ? q.choices.slice(0, 4) : [];
-                while (choices.length < 4) choices.push(`Option ${choices.length + 1}`);
+        const validStep1V2Helper = (item: any): PageNoteV2 | null => {
+            try {
+                if (typeof item.page !== 'number') return null;
 
                 return {
-                    id: q.id || `q${idx + 1}`,
-                    type: "mcq",
-                    prompt: (q.prompt || "").toString().trim(),
-                    choices,
-                    answer: normalizedAnswer,
-                    why,
-                    tag: normalizedTag,
+                    page: item.page,
+                    core: typeof item.core === 'string' ? item.core.substring(0, 300) :
+                        (typeof item.plain === 'string' ? item.plain.substring(0, 300) : "Core concept"),
+                    mechanism: Array.isArray(item.mechanism)
+                        ? item.mechanism.slice(0, 3).map((s: any) => String(s).substring(0, 200))
+                        : ["Key mechanism"],
+                    examTraps: Array.isArray(item.examTraps)
+                        ? item.examTraps.slice(0, 2).map((s: any) => String(s).substring(0, 200))
+                        : ["Watch for common mistakes"],
+                    example: typeof item.example === 'string' ? item.example.substring(0, 300) : undefined,
+                    takeaway: typeof item.takeaway === 'string' ? item.takeaway.substring(0, 100) : "Key takeaway",
+                    evidence: item.evidence && typeof item.evidence === 'object' ? {
+                        page: typeof item.evidence.page === 'number' ? item.evidence.page : item.page,
+                        snippet: typeof item.evidence.snippet === 'string'
+                            ? item.evidence.snippet.substring(0, 120)
+                            : ""
+                    } : undefined,
                 };
-            });
+            } catch { return null; }
+        };
 
-            const validStep3 = Step3QuizSchema.safeParse({ questions: normalizedQuestions });
-            if (validStep3.success) {
-                step3Data = validStep3.data;
-            } else {
-                console.warn("[Batch] Step 3 validation failed after normalization:", validStep3.error.issues);
-            }
-        } catch (e) {
-            console.warn("[Batch] Step 3 normalization error:", e);
+        const rawStep1 = Array.isArray(data.step1) ? data.step1 : [];
+        const normalizedStep1 = rawStep1.map(validStep1V2Helper).filter((x: PageNoteV2 | null): x is PageNoteV2 => x !== null);
+
+        if (normalizedStep1.length === 0) {
+            return NextResponse.json({
+                error: "Step 1 failed: No valid notes generated",
+                details: "LLM output for Step 1 was empty or malformed"
+            }, { status: 422 });
         }
 
-        console.log(`[API] Batch complete in ${Date.now() - start}ms (Step3: ${step3Data ? "ok" : "skipped"})`);
+        if (normalizedStep1.length < rawStep1.length) {
+            warnings.push(`step1_partial_loss: ${rawStep1.length - normalizedStep1.length} items dropped`);
+        }
+
+        // === Step 2 Validation & Normalization (PRD v2.3: Cues + Synthesis) ===
+        type CueV2 = { page: number; tag: string; q: string; a: string };
+
+        const VALID_TAGS = ["concept", "mechanics", "transfer", "communication"] as const;
+
+        let normalizedCues: CueV2[] = [];
+        let normalizedStep2: any = null;
+
+        if (data.step2 && typeof data.step2 === 'object') {
+            const s2 = data.step2;
+
+            // Normalize cues (Q/A format)
+            if (Array.isArray(s2.cues)) {
+                normalizedCues = s2.cues.map((c: any) => {
+                    const tag = VALID_TAGS.includes(c.tag?.toLowerCase()) ? c.tag.toLowerCase() : "concept";
+                    const q = typeof c.q === 'string' ? c.q : "What is the key concept?";
+                    return {
+                        page: typeof c.page === 'number' ? c.page : 1,
+                        tag,
+                        q: q.endsWith('?') ? q : q + '?',  // Ensure question mark
+                        a: typeof c.a === 'string' ? c.a.substring(0, 80) : "See notes",
+                    };
+                }).slice(0, 10);
+            }
+
+            normalizedStep2 = {
+                cues: normalizedCues,
+                keyIdeas: Array.isArray(s2.keyIdeas)
+                    ? s2.keyIdeas.map((s: any) => String(s).substring(0, 300)).slice(0, 5)
+                    : ["Key concepts analyzed"],
+                commonConfusion: typeof s2.commonConfusion === 'string'
+                    ? s2.commonConfusion.substring(0, 300)
+                    : "No common confusion identified.",
+                examAngle: typeof s2.examAngle === 'string'
+                    ? s2.examAngle.substring(0, 300)
+                    : "Focus on understanding core definitions.",
+            };
+        }
+
+        if (!normalizedStep2) {
+            warnings.push("step2_failed_missing");
+        }
+
+        // === Step 3 Normalization (PRD v2.3: Summary Card) ===
+        type SummaryCard = { memorize: string[]; examQs: string[] };
+
+        let step3Data: SummaryCard | null = null;
+
+        try {
+            if (data.step3 && typeof data.step3 === 'object') {
+                const s3 = data.step3;
+
+                // Normalize memorize bullets (exactly 3)
+                let memorize = Array.isArray(s3.memorize)
+                    ? s3.memorize.map((s: any) => String(s).substring(0, 200)).slice(0, 3)
+                    : [];
+                while (memorize.length < 3) {
+                    memorize.push("Key fact to remember");
+                }
+
+                // Normalize exam questions (exactly 2)
+                let examQs = Array.isArray(s3.examQs)
+                    ? s3.examQs.map((s: any) => {
+                        const q = String(s).substring(0, 200);
+                        return q.endsWith('?') ? q : q + '?';
+                    }).slice(0, 2)
+                    : [];
+                while (examQs.length < 2) {
+                    examQs.push("What are the key concepts?");
+                }
+
+                step3Data = { memorize, examQs };
+            }
+        } catch (e: any) {
+            warnings.push("step3_normalization_error");
+            console.warn("[Batch] Step 3 normalization error:", e?.message || e);
+        }
+
+        // Fallback for step3
+        if (!step3Data) {
+            step3Data = {
+                memorize: ["Key concept 1", "Key concept 2", "Key concept 3"],
+                examQs: ["What is the main idea?", "How does this apply in practice?"]
+            };
+            warnings.push("step3_used_fallback");
+        }
+
+        console.log(`[API] Batch v2.3 complete in ${Date.now() - start}ms (warnings: ${warnings.length})`);
 
         return NextResponse.json({
-            step1: validStep1.data,
-            step2: validStep2.data,
-            step3: step3Data,  // null if validation failed
+            step1: normalizedStep1,
+            step2: normalizedStep2,
+            step3: step3Data,
+            cues: normalizedCues,  // Also expose cues at top level for convenience
+            warnings: warnings.length > 0 ? warnings : undefined,
             meta: {
                 totalMs: Date.now() - start,
                 model: result.meta.model,
-                attempts: result.meta.attempts
+                attempts: result.meta.attempts,
+                version: "v2.3"
             }
         });
 

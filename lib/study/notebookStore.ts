@@ -106,3 +106,28 @@ export function generateNotebookId(): string {
     // Fallback for older environments
     return `nb_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
+
+/**
+ * Get notebooks filtered by docId (PRD v2.3)
+ */
+export function getNotebooksByDocId(docId: string): NotebookRecord[] {
+    return getNotebooks().filter(n => n.sourceMeta.docId === docId);
+}
+
+/**
+ * Get notebooks grouped by docId (PRD v2.3)
+ */
+export function getNotebooksGroupedByDoc(): Record<string, NotebookRecord[]> {
+    const notebooks = getNotebooks();
+    const grouped: Record<string, NotebookRecord[]> = {};
+
+    for (const nb of notebooks) {
+        const key = nb.sourceMeta.docId || "unknown";
+        if (!grouped[key]) {
+            grouped[key] = [];
+        }
+        grouped[key].push(nb);
+    }
+
+    return grouped;
+}

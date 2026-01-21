@@ -5,7 +5,7 @@
 
 import { Step1Explain, Step2Synthesize, Step3Quiz, Step4Diagnose } from "@/lib/llm/schema";
 
-// ============ Types ============
+// ============ Legacy Types (v2.2 compatibility) ============
 
 export interface CornellNote {
     cues: string[];
@@ -29,7 +29,51 @@ export interface SourceMeta {
     createdAt: number;
     fileName?: string;
     docId?: string;
+    docTitle?: string;  // PRD v2.3: for toast display
 }
+
+// ============ PRD v2.3 Types ============
+
+export type BarrierTagV2 = "concept" | "mechanics" | "transfer" | "communication";
+
+export interface CueV2 {
+    page: number;
+    tag: BarrierTagV2;
+    q: string;          // question (must end with ?)
+    a: string;          // short answer (≤8 words preferred)
+    cloze?: {
+        text: string;   // e.g., "Bagging reduces ____."
+        answer: string;
+    };
+}
+
+export interface EvidenceSnippet {
+    page: number;
+    snippet: string;    // ≤120 chars
+}
+
+export interface PageNoteV2 {
+    page: number;
+    core: string;           // 1 sentence core idea
+    mechanism: string[];    // 2-3 bullets
+    examTraps: string[];    // 1-2 bullets
+    example?: string;       // optional mini example
+    takeaway: string;       // ≤14 words
+    evidence?: EvidenceSnippet;
+}
+
+export interface SummaryCard {
+    memorize: string[];     // exactly 3 bullets
+    examQs: string[];       // exactly 2 questions
+}
+
+export interface CornellNoteV2 {
+    cues: CueV2[];
+    notes: PageNoteV2[];
+    summary: SummaryCard;
+    reviewPlan?: ReviewItem[];
+}
+
 
 // ============ Cue Generation Heuristics ============
 

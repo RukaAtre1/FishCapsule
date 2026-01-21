@@ -31,6 +31,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning data-theme="dark" className={`${inter.variable} ${jakarta.variable}`}>
       <body className={`${inter.className} bg-[color:var(--bg0)] text-[color:var(--text)]`}>
         <Providers>
+          {/* TopBar disabled - causes layout issues with lecture page */}
           {/* <TopBar /> */}
           {children}
         </Providers>

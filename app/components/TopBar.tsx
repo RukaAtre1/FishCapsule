@@ -3,6 +3,7 @@
 import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
 import { copy } from "@/lib/copy/en";
+import { BookOpen } from "lucide-react";
 
 export default function TopBar() {
   return (
@@ -12,7 +13,18 @@ export default function TopBar() {
           <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--accent)] shadow-[0_0_14px_rgba(45,212,191,0.7)]" />
           {copy.common.brand}
         </Link>
-        <ThemeToggle />
+
+        {/* PRD v2.3: My Notebooks nav entry */}
+        <div className="flex items-center gap-4">
+          <Link
+            href="/notebooks"
+            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            <BookOpen className="w-4 h-4" />
+            My Notebooks
+          </Link>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

@@ -316,6 +316,58 @@ export const ClozeResponseSchema = z.object({
     questions: z.array(ClozeQuestionSchema).min(3).max(3),
 });
 
+// ============ PRD v2.3: Cornell Output Quality Upgrade ============
+
+// BarrierTag lowercase for v2.3
+export const BarrierTagV2Schema = z.enum([
+    "concept",
+    "mechanics",
+    "transfer",
+    "communication",
+]);
+
+// Evidence snippet for trust/provenance
+export const EvidenceSnippetSchema = z.object({
+    page: z.number().int().min(1),
+    snippet: z.string().max(120),
+});
+
+// New Cue type with Q/A format
+export const CueV2Schema = z.object({
+    page: z.number().int().min(1),
+    tag: BarrierTagV2Schema,
+    q: z.string().min(5),           // question (must end with ?)
+    a: z.string().max(80),          // short answer (≤8 words preferred)
+    cloze: z.object({
+        text: z.string(),           // e.g., "Bagging reduces ____."
+        answer: z.string(),
+    }).optional(),
+});
+
+// New PageNote type with structured format
+export const PageNoteV2Schema = z.object({
+    page: z.number().int().min(1),
+    core: z.string().max(300),                      // 1 sentence core idea
+    mechanism: z.array(z.string()).min(2).max(3),   // 2-3 bullets
+    examTraps: z.array(z.string()).min(1).max(2),   // 1-2 bullets
+    example: z.string().max(300).optional(),        // optional mini example
+    takeaway: z.string().max(100),                  // ≤14 words
+    evidence: EvidenceSnippetSchema.optional(),
+});
+
+// New SummaryCard type (review card format)
+export const SummaryCardSchema = z.object({
+    memorize: z.array(z.string()).min(3).max(3),    // exactly 3 bullets
+    examQs: z.array(z.string()).min(2).max(2),      // exactly 2 questions
+});
+
+// Combined Cornell Output for v2.3
+export const CornellOutputV2Schema = z.object({
+    cues: z.array(CueV2Schema).min(3).max(10),
+    notes: z.array(PageNoteV2Schema).min(1),
+    summary: SummaryCardSchema,
+});
+
 // ============ Type Exports ============
 
 export type CornellCardOutput = z.infer<typeof CornellCardSchema>;
@@ -334,3 +386,10 @@ export type BarrierTag = z.infer<typeof BarrierTagSchema>;
 export type ClozeQuestion = z.infer<typeof ClozeQuestionSchema>;
 export type ClozeResponse = z.infer<typeof ClozeResponseSchema>;
 
+// PRD v2.3 types
+export type BarrierTagV2 = z.infer<typeof BarrierTagV2Schema>;
+export type EvidenceSnippet = z.infer<typeof EvidenceSnippetSchema>;
+export type CueV2 = z.infer<typeof CueV2Schema>;
+export type PageNoteV2 = z.infer<typeof PageNoteV2Schema>;
+export type SummaryCard = z.infer<typeof SummaryCardSchema>;
+export type CornellOutputV2 = z.infer<typeof CornellOutputV2Schema>;
