@@ -132,6 +132,10 @@ export function LessonRunner({
                     takeaway: step1Results[p].takeaway,
                 }));
 
+            if (bullets.length === 0) {
+                throw new Error("No study notes found for selected pages. Please generate notes first.");
+            }
+
             const res = await fetch("/api/practice/cloze", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
