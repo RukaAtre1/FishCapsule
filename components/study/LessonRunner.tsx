@@ -6,7 +6,7 @@ import {
     Loader2, X, Check, AlertCircle, ChevronRight,
     BookOpen, Trophy, RefreshCw, ArrowRight
 } from "lucide-react";
-import { ClozeQuestion, Step1Explain, Step2Synthesize } from "@/lib/llm/schema";
+import { ClozeQuestion, PageNoteV2, Step2Synthesize } from "@/lib/llm/schema";
 import {
     processCorrectAnswer, processWrongAnswer, completeLesson,
     getGameState
@@ -17,7 +17,7 @@ import { addMistake, updateMistake, getDueItems, MistakeItem } from "@/lib/study
 
 interface LessonRunnerProps {
     pages: number[];
-    step1Results: Record<number, Step1Explain>;
+    step1Results: Record<number, PageNoteV2>;
     step2Result?: Step2Synthesize | null;
     docId?: string;
     mode: "lesson" | "review";
@@ -46,7 +46,7 @@ type RunnerState = "loading" | "question" | "feedback" | "end" | "error";
 
 function renderStep1Notes(
     sourcePages: number[],
-    step1Results: Record<number, Step1Explain>
+    step1Results: Record<number, PageNoteV2>
 ): React.ReactNode {
     const notes = sourcePages
         .filter(p => step1Results[p])
@@ -62,7 +62,7 @@ function renderStep1Notes(
             </h4>
             {notes.map((note, idx) => (
                 <div key={idx} className="space-y-1 text-sm">
-                    <p className="text-zinc-200">{note.plain}</p>
+                    <p className="text-zinc-200">{note.core}</p>
                     {note.example && (
                         <p className="text-slate-400 italic pl-3 border-l-2 border-white/10">
                             Example: {note.example}
@@ -128,7 +128,7 @@ export function LessonRunner({
                 .filter(p => step1Results[p])
                 .map(p => ({
                     page: p,
-                    text: step1Results[p].plain,
+                    text: step1Results[p].core,
                     takeaway: step1Results[p].takeaway,
                 }));
 
