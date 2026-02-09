@@ -11,6 +11,8 @@ export type AiTask =
     | "cornell"
     | "practice_cloze"
     | "batch_generation"
+    | "evidence_verify"
+    | "grade_short_answer"
     | "embedding";
 
 interface ModelConfig {
@@ -18,51 +20,59 @@ interface ModelConfig {
     fallbacks: string[];
 }
 
-// Default Model Configuration
+// Default Model Configuration — PRD v2.4: Gemini 3 Flash as primary
 const MODEL_CONFIG: Record<AiTask, ModelConfig> = {
     "step1_explain": {
-        primary: "gemini-2.5-flash-lite",
-        fallbacks: ["gemini-2.5-flash", "gemini-3-flash"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     },
     "step2_synthesize": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-2.5-flash-lite", "gemini-3-flash"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     },
     "step3_quiz": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     },
     "step4_diagnose": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     },
     "concepts": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     },
     "outline": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     },
     "slides_explain_batch": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     },
     "feedback": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     },
     "cornell": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     },
     "practice_cloze": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     },
     "batch_generation": {
-        primary: "gemini-2.5-flash",
-        fallbacks: ["gemini-3-flash", "gemini-2.5-flash-lite"]
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+    },
+    "evidence_verify": {
+        primary: "gemini-3-pro",
+        fallbacks: ["gemini-3-flash"]
+    },
+    "grade_short_answer": {
+        primary: "gemini-3-flash",
+        fallbacks: ["gemini-3-pro", "gemini-2.5-flash"]
     },
     "embedding": {
         primary: "text-embedding-004",

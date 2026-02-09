@@ -3,13 +3,15 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Loader2, HelpCircle, Save, FileText, Dumbbell, ExternalLink } from "lucide-react";
+import { Loader2, HelpCircle, Save, FileText, Dumbbell, ExternalLink, BarChart3 } from "lucide-react";
 import { CornellView } from "./CornellView";
 import { CornellNoteV2, CueV2, PageNoteV2, SummaryCard, createSourceMeta } from "@/lib/study/cornellBuilder";
 import { saveNotebook, generateNotebookId, NotebookRecord } from "@/lib/study/notebookStore";
 import { PracticeTab } from "./PracticeTab";
 import { LessonRunner } from "./LessonRunner";
 import { getDueCount } from "@/lib/study/mistakeBankStore";
+import { MetricsDashboard } from "./MetricsDashboard";
+import { recordEvent, computeEvidenceCoverage } from "@/lib/study/metricsStore";
 
 interface StudyNotebookPanelProps {
     pages: number[];
@@ -22,7 +24,7 @@ interface StudyNotebookPanelProps {
     onSave?: (data: any) => void;
 }
 
-type TabType = "cornell" | "practice";
+type TabType = "cornell" | "practice" | "dashboard";
 type PracticeMode = "idle" | "lesson" | "review";
 
 // PRD v2.3: API response types
@@ -103,11 +105,13 @@ export function StudyNotebookPanel({
         };
     }, [cornellState.notes, cornellState.cues, cornellState.summary]);
 
-    // Fetch via Batch API (v2.3)
+    // Fetch via Batch API (v2.4)
     const startBatchGeneration = useCallback(async () => {
         if (pages.length === 0) return;
 
         setCornellState(prev => ({ ...prev, loading: true, error: undefined }));
+        const batchStartMs = Date.now();
+        recordEvent({ type: "step_start", data: { step: "batch_generation", pages: pages.length } });
 
         try {
             const pageTextsForRequest: Record<string, string> = {};
@@ -135,15 +139,39 @@ export function StudyNotebookPanel({
                 throw new Error((data as any).error || "Batch generation failed");
             }
 
-            // Update state with v2.3 format data
+            const latencyMs = Date.now() - batchStartMs;
+            recordEvent({
+                type: "step_done",
+                data: {
+                    step: "batch_generation",
+                    latencyMs,
+                    model: data.meta?.model,
+                    isFallback: (data.meta?.attempts ?? 1) > 1,
+                },
+            });
+
+            // Update state with v2.4 format data
+            const notes = data.step1 || [];
             setCornellState({
-                notes: data.step1 || [],
+                notes,
                 cues: data.cues || data.step2?.cues || [],
                 summary: data.step3 || null,
                 loading: false,
             });
 
+            // Record evidence coverage metric
+            const coverage = computeEvidenceCoverage(notes);
+            recordEvent({ type: "evidence_coverage", data: { coverage } });
+
         } catch (err: any) {
+            recordEvent({
+                type: "step_fail",
+                data: {
+                    step: "batch_generation",
+                    error: err.message,
+                    timeout: err.name === "AbortError",
+                },
+            });
             setCornellState(prev => ({
                 ...prev,
                 loading: false,
@@ -242,6 +270,16 @@ export function StudyNotebookPanel({
                                 </span>
                             )}
                         </button>
+                        <button
+                            onClick={() => setActiveTab("dashboard")}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === "dashboard"
+                                ? "bg-primary text-white shadow-sm"
+                                : "text-slate-400 hover:text-white hover:bg-white/5"
+                                }`}
+                        >
+                            <BarChart3 className="w-4 h-4" />
+                            Dashboard
+                        </button>
                     </div>
                 </div>
 
@@ -312,6 +350,11 @@ export function StudyNotebookPanel({
                         onStartLesson={() => setPracticeMode("lesson")}
                         onStartReview={() => setPracticeMode("review")}
                     />
+                )}
+
+                {/* Dashboard Tab View */}
+                {activeTab === "dashboard" && (
+                    <MetricsDashboard />
                 )}
             </div>
 

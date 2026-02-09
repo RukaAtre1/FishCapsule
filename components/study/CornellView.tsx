@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight, Eye, Sparkles } from "lucide-react";
-import type { CornellNoteV2, CueV2, PageNoteV2, SummaryCard, BarrierTagV2 } from "@/lib/study/cornellBuilder";
+import type { CornellNoteV2, CueV2, PageNoteV2, SummaryCard, BarrierTagV2, SourceType } from "@/lib/study/cornellBuilder";
 import { Loader2 } from "lucide-react";
 
 // Props for legacy compatibility
@@ -98,12 +98,45 @@ function EvidenceSnippet({ evidence }: { evidence: { page: number; snippet: stri
     );
 }
 
-// Page Note Card Component (v2.3 structured format)
+// Source type icon mapping
+const SOURCE_TYPE_ICON: Record<string, string> = {
+    text: "📄",
+    table: "📊",
+    figure: "🖼️",
+    formula: "🧮",
+};
+
+// Confidence bar color
+function confidenceColor(c: number): string {
+    if (c >= 0.8) return "bg-green-500";
+    if (c >= 0.5) return "bg-yellow-500";
+    return "bg-red-500";
+}
+
+// Page Note Card Component (v2.4 evidence-grounded format)
 function PageNoteCard({ note, onGenerateCloze }: { note: PageNoteV2; onGenerateCloze?: (takeaway: string, page: number) => void }) {
     return (
         <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-3">
-            {/* Page Header */}
-            <div className="text-xs text-slate-500 font-medium">Page {note.page}</div>
+            {/* Page Header + Source Type + Confidence */}
+            <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 font-medium">Page {note.page}</span>
+                {note.source_type && (
+                    <span className="text-[10px] bg-slate-800/60 text-slate-400 px-1.5 py-0.5 rounded font-mono">
+                        {SOURCE_TYPE_ICON[note.source_type] || "📄"} {note.source_type}
+                    </span>
+                )}
+                {typeof note.confidence === 'number' && (
+                    <div className="flex items-center gap-1.5 ml-auto" title={`Confidence: ${Math.round(note.confidence * 100)}%`}>
+                        <span className="text-[10px] text-slate-500">{Math.round(note.confidence * 100)}%</span>
+                        <div className="w-12 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                                className={`h-full rounded-full ${confidenceColor(note.confidence)} transition-all`}
+                                style={{ width: `${note.confidence * 100}%` }}
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* Core Idea */}
             <div>
@@ -243,10 +276,10 @@ function LegacyPageNote({ note }: { note: { page: number; bullets: string[] } })
                     <li
                         key={idx}
                         className={`text-base leading-relaxed ${bullet.startsWith("💡")
-                                ? "text-amber-200 font-medium bg-amber-950/20 p-2 rounded-lg border-l-2 border-amber-500/50"
-                                : bullet.startsWith("Example:")
-                                    ? "text-slate-300 italic pl-4 border-l-2 border-white/10"
-                                    : "text-zinc-100"
+                            ? "text-amber-200 font-medium bg-amber-950/20 p-2 rounded-lg border-l-2 border-amber-500/50"
+                            : bullet.startsWith("Example:")
+                                ? "text-slate-300 italic pl-4 border-l-2 border-white/10"
+                                : "text-zinc-100"
                             }`}
                     >
                         {bullet}

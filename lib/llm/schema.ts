@@ -326,11 +326,14 @@ export const BarrierTagV2Schema = z.enum([
     "communication",
 ]);
 
-// Evidence snippet for trust/provenance
+// Evidence snippet for trust/provenance (PRD v2.4: ≤240 chars)
 export const EvidenceSnippetSchema = z.object({
     page: z.number().int().min(1),
-    snippet: z.string().max(120),
+    snippet: z.string().max(240),
 });
+
+// Source type classification for evidence
+export const SourceTypeSchema = z.enum(["text", "table", "figure", "formula"]);
 
 // New Cue type with Q/A format
 export const CueV2Schema = z.object({
@@ -344,7 +347,7 @@ export const CueV2Schema = z.object({
     }).optional(),
 });
 
-// New PageNote type with structured format
+// New PageNote type with structured format (PRD v2.4: evidence-grounded)
 export const PageNoteV2Schema = z.object({
     page: z.number().int().min(1),
     core: z.string().max(300),                      // 1 sentence core idea
@@ -353,6 +356,8 @@ export const PageNoteV2Schema = z.object({
     example: z.string().max(300).optional(),        // optional mini example
     takeaway: z.string().max(100),                  // ≤14 words
     evidence: EvidenceSnippetSchema.optional(),
+    confidence: z.number().min(0).max(1).optional(),     // PRD v2.4: model self-assessed confidence
+    source_type: SourceTypeSchema.optional(),            // PRD v2.4: text | table | figure | formula
 });
 
 // New SummaryCard type (review card format)
@@ -389,7 +394,29 @@ export type ClozeResponse = z.infer<typeof ClozeResponseSchema>;
 // PRD v2.3 types
 export type BarrierTagV2 = z.infer<typeof BarrierTagV2Schema>;
 export type EvidenceSnippet = z.infer<typeof EvidenceSnippetSchema>;
+export type SourceType = z.infer<typeof SourceTypeSchema>;
 export type CueV2 = z.infer<typeof CueV2Schema>;
 export type PageNoteV2 = z.infer<typeof PageNoteV2Schema>;
 export type SummaryCard = z.infer<typeof SummaryCardSchema>;
 export type CornellOutputV2 = z.infer<typeof CornellOutputV2Schema>;
+
+// ============ PRD v2.4: Grade Response Schema ============
+
+export const FixKitMiniQuizSchema = z.object({
+    question: z.string().min(5),
+    choices: z.array(z.string()).min(3).max(4),
+    answer: z.string().min(1),
+});
+
+export const GradeResponseSchema = z.object({
+    score: z.number().min(0).max(1),
+    feedback: z.string().min(5).max(500),
+    barrierTags: z.array(BarrierTagSchema).min(1).max(3),
+    fixKit: z.object({
+        microTasks: z.array(z.string()).min(1).max(3),
+        miniQuiz: FixKitMiniQuizSchema.optional(),
+    }),
+});
+
+export type GradeResponse = z.infer<typeof GradeResponseSchema>;
+export type FixKitMiniQuiz = z.infer<typeof FixKitMiniQuizSchema>;

@@ -5,10 +5,10 @@ import { z } from "zod";
 
 export const maxDuration = 60;
 
-// PRD v2.3: Updated system prompt for study-efficient output
+// PRD v2.4: Updated system prompt for evidence-grounded, study-efficient output
 const SYSTEM_PROMPT = `You are an elite study assistant creating Cornell-style notes optimized for active recall and exam preparation.
 
-## OUTPUT REQUIREMENTS (PRD v2.3)
+## OUTPUT REQUIREMENTS (PRD v2.4 — Evidence-Grounded)
 
 ### STEP 1: PER-PAGE NOTES (structured format)
 For each page, generate:
@@ -17,7 +17,9 @@ For each page, generate:
 - "examTraps": 1-2 bullet points on common mistakes/exam pitfalls
 - "example": (optional) 1 short concrete example
 - "takeaway": A memorable phrase (≤14 words)
-- "evidence": { "page": number, "snippet": "≤120 char excerpt from source" }
+- "evidence": { "page": number, "snippet": "≤240 char excerpt QUOTED from source text" }
+- "confidence": A number 0-1 representing how confident you are the evidence accurately supports the core idea (1.0 = exact quote found, 0.5 = paraphrased, 0.2 = inferred)
+- "source_type": One of "text" | "table" | "figure" | "formula" — classify the primary content type of this page
 
 ### STEP 2: CUES (Q/A Recall Format)
 Generate 4-6 retrieval cues. Each cue MUST be:
@@ -43,7 +45,9 @@ OUTPUT FORMAT (STRICT JSON):
       "examTraps": ["Watch out for..."],
       "example": "Optional brief example",
       "takeaway": "≤14 words memorable phrase",
-      "evidence": { "page": number, "snippet": "≤120 chars from source" }
+      "evidence": { "page": number, "snippet": "≤240 chars QUOTED from source" },
+      "confidence": 0.9,
+      "source_type": "text"
     }
   ],
   "step2": {
@@ -63,7 +67,9 @@ OUTPUT FORMAT (STRICT JSON):
 CRITICAL RULES:
 - Cues must be QUESTIONS (end with ?)
 - No repetition between pages
-- Evidence snippets must be real excerpts (≤120 chars)
+- Evidence snippets must be REAL EXCERPTS from the input text (≤240 chars). Do NOT fabricate.
+- confidence must reflect actual grounding: 1.0 only if snippet is a direct quote
+- source_type must match the page content type
 - Summary is for quick review, not a repeat of notes
 `;
 
@@ -127,7 +133,9 @@ Generate Step 1, 2, and 3 content based on the above.
                                         page: { type: "number" },
                                         snippet: { type: "string" }
                                     }
-                                }
+                                },
+                                confidence: { type: "number" },
+                                source_type: { type: "string", enum: ["text", "table", "figure", "formula"] }
                             },
                             required: ["page", "core", "mechanism", "examTraps", "takeaway"]
                         }
@@ -177,7 +185,7 @@ Generate Step 1, 2, and 3 content based on the above.
         const data = result.value;
         const warnings: string[] = [];
 
-        // === Step 1 Validation & Normalization (PRD v2.3: Structured PageNote) ===
+        // === Step 1 Validation & Normalization (PRD v2.4: Evidence-Grounded PageNote) ===
         type PageNoteV2 = {
             page: number;
             core: string;
@@ -186,11 +194,26 @@ Generate Step 1, 2, and 3 content based on the above.
             example?: string;
             takeaway: string;
             evidence?: { page: number; snippet: string };
+            confidence?: number;
+            source_type?: "text" | "table" | "figure" | "formula";
         };
+
+        const VALID_SOURCE_TYPES = ["text", "table", "figure", "formula"] as const;
 
         const validStep1V2Helper = (item: any): PageNoteV2 | null => {
             try {
                 if (typeof item.page !== 'number') return null;
+
+                // Normalize source_type
+                const rawSourceType = typeof item.source_type === 'string' ? item.source_type.toLowerCase() : null;
+                const source_type = rawSourceType && VALID_SOURCE_TYPES.includes(rawSourceType as any)
+                    ? rawSourceType as "text" | "table" | "figure" | "formula"
+                    : undefined;
+
+                // Normalize confidence
+                const confidence = typeof item.confidence === 'number'
+                    ? Math.max(0, Math.min(1, item.confidence))
+                    : undefined;
 
                 return {
                     page: item.page,
@@ -207,9 +230,11 @@ Generate Step 1, 2, and 3 content based on the above.
                     evidence: item.evidence && typeof item.evidence === 'object' ? {
                         page: typeof item.evidence.page === 'number' ? item.evidence.page : item.page,
                         snippet: typeof item.evidence.snippet === 'string'
-                            ? item.evidence.snippet.substring(0, 120)
+                            ? item.evidence.snippet.substring(0, 240)
                             : ""
                     } : undefined,
+                    confidence,
+                    source_type,
                 };
             } catch { return null; }
         };
@@ -327,7 +352,7 @@ Generate Step 1, 2, and 3 content based on the above.
                 totalMs: Date.now() - start,
                 model: result.meta.model,
                 attempts: result.meta.attempts,
-                version: "v2.3"
+                version: "v2.4"
             }
         });
 

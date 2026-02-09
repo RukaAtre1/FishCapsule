@@ -12,6 +12,7 @@ import {
     getGameState
 } from "@/lib/study/gameStateStore";
 import { addMistake, updateMistake, getDueItems, MistakeItem } from "@/lib/study/mistakeBankStore";
+import { recordEvent } from "@/lib/study/metricsStore";
 
 // ============ Types ============
 
@@ -178,6 +179,12 @@ export function LessonRunner({
             ts: Date.now(),
         };
         setAnswers(prev => [...prev, record]);
+
+        // Record metric event
+        recordEvent({
+            type: mode === "review" ? "review_answer" : "quiz_answer",
+            data: { correct: isCorrect, questionId: currentQuestion.id },
+        });
 
         // Update game state
         if (isCorrect) {

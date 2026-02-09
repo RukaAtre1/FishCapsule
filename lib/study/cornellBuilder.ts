@@ -47,9 +47,11 @@ export interface CueV2 {
     };
 }
 
+export type SourceType = "text" | "table" | "figure" | "formula";
+
 export interface EvidenceSnippet {
     page: number;
-    snippet: string;    // ≤120 chars
+    snippet: string;    // ≤240 chars (PRD v2.4)
 }
 
 export interface PageNoteV2 {
@@ -60,6 +62,8 @@ export interface PageNoteV2 {
     example?: string;       // optional mini example
     takeaway: string;       // ≤14 words
     evidence?: EvidenceSnippet;
+    confidence?: number;    // PRD v2.4: 0–1 model self-assessed
+    source_type?: SourceType; // PRD v2.4: content classification
 }
 
 export interface SummaryCard {

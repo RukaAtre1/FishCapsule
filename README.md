@@ -23,9 +23,9 @@ FishCapsule transforms passive reading into active mastery. It breaks down compl
 ## ♊ Gemini Usage
 FishCapsule is built to leverage the speed and reasoning of the Gemini family.
 
-- **Current Model**: `gemini-2.5-flash-lite` (used for high-speed page-by-page extraction and explanation).
-- **Secondary/Fallback**: `gemini-2.5-flash` (used for synthesis, quiz generation, and barrier diagnosis).
-- **Submission Target**: We are currently migrating all core "Agentic" reasoning tasks to **Gemini 3 Flash (Preview)** before final submission to maximize logic-heavy diagnostic accuracy.
+- **Primary Model**: `gemini-3-flash` — Powers all core tasks: extraction, synthesis, quiz generation, and barrier diagnosis.
+- **High-Stakes Model**: `gemini-3-pro` — Used for evidence verification and short-answer grading arbitration.
+- **Fallback**: `gemini-2.5-flash` / `gemini-2.5-flash-lite` — Automatic fallback on quota or timeout.
 
 **Gemini handles:**
 - **Information Extraction**: Identifying core ideas and evidence snippets from raw PDF/OCR text.
