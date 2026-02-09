@@ -160,7 +160,7 @@ function LectureWorkspace() {
                     <div className="h-full flex flex-col">
                         <div className="flex-shrink-0 px-6 py-3 bg-muted/10 border-b">
                             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                {showStepFlow ? "Study Notebook (PRD v2.0)" : "Select pages to begin"}
+                                {showStepFlow ? "Study Notebook" : "Select pages to begin"}
                             </h2>
                         </div>
                         <div className="flex-grow overflow-y-auto">
@@ -187,7 +187,7 @@ function LectureWorkspace() {
 
             {/* Footer with Version */}
             <footer className="h-8 border-t bg-muted/20 flex items-center justify-center text-xs text-muted-foreground">
-                FishCapsule PRD v2.0 • Gemini 2.5 Flash Lite
+                FishCapsule • Gemini 3 Flash
             </footer>
         </div>
     );
